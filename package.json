@@ -9,12 +9,12 @@
     "web": "expo start --web",
     "build:android": "npx eas build --platform android",
     "build:android:prod": "npx eas build --platform android --profile production",
-    "build:apk": "npx eas build --platform android --profile apk",
-    "build:apk:prod": "npx eas build --platform android --profile apk",
-    "build:apk:cache": "npx eas build --platform android --profile apk --clear-cache",
-    "build:ios": "npx eas build --platform ios",
-    "build:ios:prod": "npx eas build --platform ios --profile production",
-    "build:all": "npx eas build --platform all",
+    "build:apk": "npx eas-cli build --platform android --profile apk",
+    "build:apk:prod": "npx eas-cli build --platform android --profile apk",
+    "build:apk:cache": "npx eas-cli build --platform android --profile apk --clear-cache",
+    "build:ios": "npx eas-cli build --platform ios",
+    "build:ios:prod": "npx eas-cli build --platform ios --profile production",
+    "build:all": "npx eas-cli build --platform all",
     "build:all:prod": "npx eas build --platform all --profile production",
     "submit:android": "npx eas submit --platform android",
     "submit:ios": "npx eas submit --platform ios",
@@ -46,6 +46,8 @@
     "expo-sharing": "~14.0.7",
     "expo-status-bar": "~3.0.8",
     "firebase": "^11.10.0",
+    "metro": "^0.83.3",
+    "metro-config": "^0.83.3",
     "nativewind": "^4.1.23",
     "react": "19.1.0",
     "react-hook-form": "^7.60.0",
@@ -72,6 +74,7 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
+        "enabled": false,
         "exclude": [
           "firebase",
           "node-fetch"

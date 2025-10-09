@@ -1,7 +1,7 @@
 // API Configuration
 const API_CONFIG = {
   // Replace this with your actual backend API URL
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://fims.cosmopolitan.edu.ng', // Use environment variable or fallback
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://172.20.10.4:3000', // Use environment variable or fallback
   
   // API endpoints
   ENDPOINTS: {

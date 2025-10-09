@@ -398,7 +398,7 @@ export default function AddFarmerScreen({ navigation }) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        await fetch('https://fims.cosmopolitan.edu.ng/health', { 
+        await fetch('http://172.20.10.4:3000/health', { 
           method: 'GET',
           signal: controller.signal
         });

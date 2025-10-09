@@ -9,7 +9,6 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 
 const CustomSelect = ({ 
   options, 
@@ -25,40 +24,46 @@ const CustomSelect = ({
   const selectedOption = options.find(option => option.value === selectedValue);
   const displayText = selectedOption ? selectedOption.label : placeholder;
 
-  // For iOS, use a modal with a list
-  if (Platform.OS === 'ios') {
-    return (
-      <View style={[styles.container, style]}>
-        <TouchableOpacity
-          style={[
-            styles.selectButton,
-            error && styles.selectButtonError,
-            disabled && styles.selectButtonDisabled
-          ]}
-          onPress={() => !disabled && setModalVisible(true)}
-          disabled={disabled}
-        >
-          <Text style={[
-            styles.selectButtonText,
-            !selectedValue && styles.placeholderText,
-            disabled && styles.disabledText
-          ]}>
-            {displayText}
-          </Text>
-          <Ionicons 
-            name="chevron-down" 
-            size={20} 
-            color={disabled ? '#9ca3af' : '#6b7280'} 
-          />
-        </TouchableOpacity>
+  // Use modal approach for both iOS and Android for consistency
+  return (
+    <View style={[styles.container, style]}>
+      <TouchableOpacity
+        style={[
+          styles.selectButton,
+          error && styles.selectButtonError,
+          disabled && styles.selectButtonDisabled
+        ]}
+        onPress={() => !disabled && setModalVisible(true)}
+        disabled={disabled}
+      >
+        <Text style={[
+          styles.selectButtonText,
+          !selectedValue && styles.placeholderText,
+          disabled && styles.disabledText
+        ]}>
+          {displayText}
+        </Text>
+        <Ionicons 
+          name="chevron-down" 
+          size={20} 
+          color={disabled ? '#9ca3af' : '#6b7280'} 
+        />
+      </TouchableOpacity>
 
-        <Modal
-          animationType="slide"
-          presentationStyle="pageSheet"
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
+      <Modal
+        animationType="slide"
+        transparent={Platform.OS === 'android'}
+        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : undefined}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={Platform.OS === 'android' ? styles.modalOverlay : styles.modalContent}>
+          <TouchableOpacity 
+            style={Platform.OS === 'android' ? styles.modalBackdrop : null}
+            activeOpacity={1}
+            onPress={() => setModalVisible(false)}
+          />
+          <View style={Platform.OS === 'android' ? styles.androidModalContent : null}>
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
@@ -66,7 +71,7 @@ const CustomSelect = ({
               >
                 <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Select Option</Text>
+              <Text style={styles.modalTitle}>{placeholder}</Text>
               <View style={styles.headerSpacer} />
             </View>
             
@@ -99,34 +104,8 @@ const CustomSelect = ({
               showsVerticalScrollIndicator={false}
             />
           </View>
-        </Modal>
-      </View>
-    );
-  }
-
-  // For Android, use the native Picker
-  return (
-    <View style={[styles.container, style]}>
-      <View style={[
-        styles.pickerContainer,
-        error && styles.pickerContainerError,
-        disabled && styles.pickerContainerDisabled
-      ]}>
-        <Picker
-          selectedValue={selectedValue}
-          onValueChange={onValueChange}
-          style={[styles.picker, disabled && styles.pickerDisabled]}
-          enabled={!disabled}
-        >
-          {options.map((option) => (
-            <Picker.Item
-              key={option.value}
-              label={option.label}
-              value={option.value}
-            />
-          ))}
-        </Picker>
-      </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -170,12 +149,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  modalBackdrop: {
+    flex: 1,
+  },
+  androidModalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    minHeight: '40%',
+  },
   modalContent: {
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '80%',
     minHeight: '50%',
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -193,6 +183,9 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  headerSpacer: {
+    width: 32,
   },
   optionsList: {
     flex: 1,
@@ -217,27 +210,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: '#013358',
     fontWeight: '500',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
-  },
-  pickerContainerError: {
-    borderColor: '#ef4444',
-  },
-  pickerContainerDisabled: {
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-  },
-  picker: {
-    height: 48,
-    width: '100%',
-  },
-  pickerDisabled: {
-    color: '#9ca3af',
   },
 });
 

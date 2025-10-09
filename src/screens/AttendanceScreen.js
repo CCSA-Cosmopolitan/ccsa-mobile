@@ -38,7 +38,7 @@ export default function AttendanceScreen({ navigation }) {
         setCheckInTime(new Date(checkInTimeStr));
       }
     } catch (error) {
-      console.error('Error loading attendance state:', error);
+      console.error('Error loading attendance state:', error?.message || String(error));
     }
   };
 
@@ -49,7 +49,7 @@ export default function AttendanceScreen({ navigation }) {
         setAttendanceHistory(JSON.parse(history));
       }
     } catch (error) {
-      console.error('Error loading attendance history:', error);
+      console.error('Error loading attendance history:', error?.message || String(error));
     }
   };
 
@@ -78,7 +78,7 @@ export default function AttendanceScreen({ navigation }) {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.error('Error getting location:', error?.message || String(error));
       Alert.alert('Error', 'Failed to get current location. Please try again.');
       return null;
     }
@@ -94,11 +94,19 @@ export default function AttendanceScreen({ navigation }) {
         return;
       }
 
+      // Ensure we have a valid user ID
+      const agentId = user?.uid || user?.id || auth.currentUser?.uid;
+      if (!agentId) {
+        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       const checkInData = {
         type: 'check_in',
         timestamp: new Date().toISOString(),
         location: location,
-        agentId: user?.id,
+        agentId: agentId,
         date: new Date().toDateString(),
       };
 
@@ -120,7 +128,7 @@ export default function AttendanceScreen({ navigation }) {
 
       Alert.alert('Success', 'Checked in successfully!');
     } catch (error) {
-      console.error('Error checking in:', error);
+      console.error('Error checking in:', error?.message || String(error));
       Alert.alert('Error', 'Failed to check in. Please try again.');
     } finally {
       setLoading(false);
@@ -137,11 +145,19 @@ export default function AttendanceScreen({ navigation }) {
         return;
       }
 
+      // Ensure we have a valid user ID
+      const agentId = user?.uid || user?.id || auth.currentUser?.uid;
+      if (!agentId) {
+        Alert.alert('Error', 'User not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       const checkOutData = {
         type: 'check_out',
         timestamp: new Date().toISOString(),
         location: location,
-        agentId: user?.id,
+        agentId: agentId,
         date: new Date().toDateString(),
         duration: checkInTime ? Math.floor((new Date() - checkInTime) / 1000 / 60) : 0, // minutes
       };
@@ -164,7 +180,7 @@ export default function AttendanceScreen({ navigation }) {
 
       Alert.alert('Success', 'Checked out successfully!');
     } catch (error) {
-      console.error('Error checking out:', error);
+      console.error('Error checking out:', error?.message || String(error));
       Alert.alert('Error', 'Failed to check out. Please try again.');
     } finally {
       setLoading(false);
@@ -178,6 +194,11 @@ export default function AttendanceScreen({ navigation }) {
         throw new Error('No authentication token available');
       }
 
+      // Validate that we have required data
+      if (!attendanceData.agentId) {
+        throw new Error('Agent ID is missing');
+      }
+
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/attendance`, {
         method: 'POST',
         headers: {
@@ -189,17 +210,21 @@ export default function AttendanceScreen({ navigation }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to sync attendance to server');
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
       
       console.log('✅ Attendance synced successfully');
     } catch (error) {
-      console.error('Error syncing to server:', error);
+      console.error('Error syncing to server:', error?.message || String(error));
       // Store for later sync
-      const pendingSync = await AsyncStorage.getItem('pendingAttendanceSync');
-      const pending = pendingSync ? JSON.parse(pendingSync) : [];
-      pending.push(attendanceData);
-      await AsyncStorage.setItem('pendingAttendanceSync', JSON.stringify(pending));
+      try {
+        const pendingSync = await AsyncStorage.getItem('pendingAttendanceSync');
+        const pending = pendingSync ? JSON.parse(pendingSync) : [];
+        pending.push(attendanceData);
+        await AsyncStorage.setItem('pendingAttendanceSync', JSON.stringify(pending));
+      } catch (storageError) {
+        console.error('Error storing pending sync data:', storageError?.message || String(storageError));
+      }
     }
   };
 
@@ -207,6 +232,7 @@ export default function AttendanceScreen({ navigation }) {
     if (!time) return 'N/A';
     try {
       const date = new Date(time);
+      if (isNaN(date.getTime())) return 'Invalid time';
       return includeDate ? date.toLocaleString() : date.toLocaleTimeString();
     } catch (error) {
       return 'Invalid time';
@@ -226,6 +252,44 @@ export default function AttendanceScreen({ navigation }) {
     if (!checkInTime) return 'Not checked in';
     const duration = Math.floor((new Date() - checkInTime) / 1000 / 60);
     return formatDuration(duration);
+  };
+
+  // Helper functions for summary calculations
+  const getTodayCheckIns = () => {
+    const count = attendanceHistory.filter(item => 
+      item.type === 'check_in' && 
+      new Date(item.timestamp).toDateString() === new Date().toDateString()
+    ).length;
+    return String(count);
+  };
+
+  const getTodayCheckOuts = () => {
+    const count = attendanceHistory.filter(item => 
+      item.type === 'check_out' && 
+      new Date(item.timestamp).toDateString() === new Date().toDateString()
+    ).length;
+    return String(count);
+  };
+
+  const getTodayTotalTime = () => {
+    const todayCheckOuts = attendanceHistory.filter(item => 
+      item.type === 'check_out' && 
+      new Date(item.timestamp).toDateString() === new Date().toDateString()
+    );
+    const totalMinutes = todayCheckOuts.reduce((total, item) => total + (item.duration || 0), 0);
+    return formatDuration(totalMinutes);
+  };
+
+  const getTodayUniqueLocations = () => {
+    const todayItems = attendanceHistory.filter(item => 
+      new Date(item.timestamp).toDateString() === new Date().toDateString()
+    );
+    
+    const locations = todayItems
+      .filter(item => item.location?.latitude && item.location?.longitude)
+      .map(item => `${item.location.latitude.toFixed(4)},${item.location.longitude.toFixed(4)}`);
+    
+    return String(new Set(locations).size);
   };
 
   return (
@@ -298,50 +362,22 @@ export default function AttendanceScreen({ navigation }) {
             <View style={styles.summaryItem}>
               <Ionicons name="log-in-outline" size={24} color="#10b981" />
               <Text style={styles.summaryLabel}>Check-ins</Text>
-              <Text style={styles.summaryValue}>
-                {attendanceHistory.filter(item => 
-                  item.type === 'check_in' && 
-                  new Date(item.timestamp).toDateString() === new Date().toDateString()
-                ).length}
-              </Text>
+              <Text style={styles.summaryValue}>{getTodayCheckIns()}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="log-out-outline" size={24} color="#ef4444" />
               <Text style={styles.summaryLabel}>Check-outs</Text>
-              <Text style={styles.summaryValue}>
-                {attendanceHistory.filter(item => 
-                  item.type === 'check_out' && 
-                  new Date(item.timestamp).toDateString() === new Date().toDateString()
-                ).length}
-              </Text>
+              <Text style={styles.summaryValue}>{getTodayCheckOuts()}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="time-outline" size={24} color="#3b82f6" />
               <Text style={styles.summaryLabel}>Total Time</Text>
-              <Text style={styles.summaryValue}>
-                {formatDuration(
-                  attendanceHistory
-                    .filter(item => 
-                      item.type === 'check_out' && 
-                      new Date(item.timestamp).toDateString() === new Date().toDateString()
-                    )
-                    .reduce((total, item) => total + (item.duration || 0), 0)
-                )}
-              </Text>
+              <Text style={styles.summaryValue}>{getTodayTotalTime()}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="location-outline" size={24} color="#8b5cf6" />
               <Text style={styles.summaryLabel}>Locations</Text>
-              <Text style={styles.summaryValue}>
-                {new Set(
-                  attendanceHistory
-                    .filter(item => 
-                      new Date(item.timestamp).toDateString() === new Date().toDateString()
-                    )
-                    .filter(item => item.location?.latitude && item.location?.longitude)
-                    .map(item => `${item.location.latitude.toFixed(4)},${item.location.longitude.toFixed(4)}`)
-                ).size}
-              </Text>
+              <Text style={styles.summaryValue}>{getTodayUniqueLocations()}</Text>
             </View>
           </View>
         </View>
@@ -349,37 +385,59 @@ export default function AttendanceScreen({ navigation }) {
         {/* Recent Activity */}
         <View style={styles.historyCard}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {attendanceHistory.slice(-5).reverse().map((item, index) => (
-            <View key={index} style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <Ionicons 
-                  name={item.type === 'check_in' ? "log-in-outline" : "log-out-outline"} 
-                  size={20} 
-                  color={item.type === 'check_in' ? "#10b981" : "#ef4444"} 
-                />
-              </View>
-              <View style={styles.historyContent}>
-                <Text style={styles.historyType}>
-                  {item.type === 'check_in' ? 'Checked In' : 'Checked Out'}
-                </Text>
-                <Text style={styles.historyTime}>
-                  {formatTime(item.timestamp, true)}
-                </Text>
-                {item.location && item.location.latitude && item.location.longitude && (
-                  <Text style={styles.historyLocation}>
-                    📍 {item.location.latitude.toFixed(4)}, {item.location.longitude.toFixed(4)}
-                  </Text>
-                )}
-                {item.duration && (
-                  <Text style={styles.historyDuration}>
-                    Duration: {formatDuration(item.duration)}
-                  </Text>
-                )}
-              </View>
-            </View>
-          ))}
-          
-          {attendanceHistory.length === 0 && (
+          {attendanceHistory.length > 0 ? (
+            attendanceHistory.slice(-5).reverse().map((item, index) => {
+              // Safely extract values to prevent rendering issues
+              const itemType = item?.type || 'unknown';
+              const timestamp = item?.timestamp || '';
+              const latitude = item?.location?.latitude;
+              const longitude = item?.location?.longitude;
+              const duration = item?.duration;
+              
+              const displayType = itemType === 'check_in' ? 'Checked In' : 'Checked Out';
+              const iconName = itemType === 'check_in' ? "log-in-outline" : "log-out-outline";
+              const iconColor = itemType === 'check_in' ? "#10b981" : "#ef4444";
+              
+              const hasValidLocation = latitude && longitude && 
+                                     typeof latitude === 'number' && typeof longitude === 'number' &&
+                                     !isNaN(latitude) && !isNaN(longitude);
+              
+              const hasValidDuration = duration && 
+                                     typeof duration === 'number' && 
+                                     !isNaN(duration) && 
+                                     duration > 0;
+              
+              return (
+                <View key={`history-${index}-${timestamp}`} style={styles.historyItem}>
+                  <View style={styles.historyIcon}>
+                    <Ionicons 
+                      name={iconName} 
+                      size={20} 
+                      color={iconColor} 
+                    />
+                  </View>
+                  <View style={styles.historyContent}>
+                    <Text style={styles.historyType}>
+                      {displayType}
+                    </Text>
+                    <Text style={styles.historyTime}>
+                      {formatTime(timestamp, true)}
+                    </Text>
+                    {hasValidLocation && (
+                      <Text style={styles.historyLocation}>
+                        {`📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`}
+                      </Text>
+                    )}
+                    {hasValidDuration && (
+                      <Text style={styles.historyDuration}>
+                        {`Duration: ${formatDuration(duration)}`}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })
+          ) : (
             <View style={styles.emptyState}>
               <Ionicons name="time-outline" size={48} color="#9ca3af" />
               <Text style={styles.emptyText}>No attendance records yet</Text>

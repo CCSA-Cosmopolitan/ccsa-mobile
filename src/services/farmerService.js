@@ -5,9 +5,9 @@ const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Fallback URLs to try if primary fails
 const FALLBACK_URLS = [
-  'https://fims.cosmopolitan.edu.ng',
-  'https://fims.cosmopolitan.edu.ng',
-  'https://fims.cosmopolitan.edu.ng'
+  'http://172.20.10.4:3000',
+  'http://172.20.10.4:3000',
+  'http://172.20.10.4:3000'
 ];
 
 const getAuthToken = async () => {

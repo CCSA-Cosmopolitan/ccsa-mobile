@@ -47,7 +47,7 @@ fi
 # Check for environment variables
 echo "� Environment Configuration:"
 echo "NODE_ENV: $NODE_ENV"
-echo "API Base URL: ${EXPO_PUBLIC_API_BASE_URL:-'https://fims.cosmopolitan.edu.ng'}"
+echo "API Base URL: ${EXPO_PUBLIC_API_BASE_URL:-'http://172.20.10.4:3000'}"
 
 # Run pre-build checks
 echo "🔎 Running pre-build checks..."

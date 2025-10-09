@@ -150,7 +150,7 @@ export default function CertificateScreen({ navigation, route }) {
   const generateVerificationUrl = (farmer) => {
     if (!farmer?.id) return farmer?.nin || '';
     const certificateId = `CCSA-${new Date().getFullYear()}-${farmer.id.slice(-6).toUpperCase()}`;
-    return `https://fims.cosmopolitan.edu.ng/verify-certificate/${certificateId}`;
+    return `http://172.20.10.4:3000/verify-certificate/${certificateId}`;
   };
 
   const generatePolygonSVG = (polygonData) => {
