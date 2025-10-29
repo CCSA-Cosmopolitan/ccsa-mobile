@@ -95,6 +95,7 @@ export const nigerianBanks = [
   { code: "100039", name: "Kuda Bank" },
   { code: "100033", name: "One Finance" },
   { code: "100004", name: "Opay" },
+  { code: "105055", name: "MONIE POINT" },
   { code: "100003", name: "PalmPay" },
   { code: "100005", name: "Paycom" },
   { code: "100029", name: "Rubies MFB" },

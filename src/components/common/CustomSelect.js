@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   FlatList,
   StyleSheet,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const CustomSelect = ({ 
-  options, 
+  options = [], 
   selectedValue, 
   onValueChange, 
   placeholder = 'Select an option',
@@ -21,7 +22,21 @@ const CustomSelect = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
-  const selectedOption = options.find(option => option.value === selectedValue);
+  // Ensure options is always an array
+  const safeOptions = Array.isArray(options) ? options : [];
+  
+  // Debug logging
+  if (modalVisible && safeOptions.length > 0) {
+    console.log('📱 Modal opened on', Platform.OS, 'with', safeOptions.length, 'options');
+    console.log('First option:', safeOptions[0]);
+  }
+  
+  // Find selected option, ensuring value comparison works for different types
+  const selectedOption = safeOptions.find(option => {
+    if (selectedValue === null || selectedValue === undefined) return false;
+    return String(option.value) === String(selectedValue);
+  });
+  
   const displayText = selectedOption ? selectedOption.label : placeholder;
 
   // Use modal approach for both iOS and Android for consistency
@@ -57,13 +72,9 @@ const CustomSelect = ({
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={Platform.OS === 'android' ? styles.modalOverlay : styles.modalContent}>
-          <TouchableOpacity 
-            style={Platform.OS === 'android' ? styles.modalBackdrop : null}
-            activeOpacity={1}
-            onPress={() => setModalVisible(false)}
-          />
-          <View style={Platform.OS === 'android' ? styles.androidModalContent : null}>
+        {Platform.OS === 'ios' ? (
+          // iOS Modal Content - Simple structure for pageSheet with SafeAreaView
+          <SafeAreaView style={styles.iosModalContent}>
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
@@ -75,36 +86,116 @@ const CustomSelect = ({
               <View style={styles.headerSpacer} />
             </View>
             
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.optionItem,
-                    item.value === selectedValue && styles.selectedOption
-                  ]}
-                  onPress={() => {
-                    onValueChange(item.value);
-                    setModalVisible(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.optionText,
-                    item.value === selectedValue && styles.selectedOptionText
-                  ]}>
-                    {item.label}
-                  </Text>
-                  {item.value === selectedValue && (
-                    <Ionicons name="checkmark" size={20} color="#013358" />
-                  )}
-                </TouchableOpacity>
-              )}
-              style={styles.optionsList}
-              showsVerticalScrollIndicator={false}
+            {safeOptions.length > 0 ? (
+              <FlatList
+                data={safeOptions}
+                keyExtractor={(item, index) => item.value ? String(item.value) : `option-${index}`}
+                renderItem={({ item }) => {
+                  const isSelected = String(item.value) === String(selectedValue);
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.optionItem,
+                        isSelected && styles.selectedOption
+                      ]}
+                      onPress={() => {
+                        console.log('✅ Option selected:', item.label, item.value);
+                        if (onValueChange) {
+                          onValueChange(item.value);
+                        }
+                        setModalVisible(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        isSelected && styles.selectedOptionText
+                      ]}>
+                        {item.label || 'Unnamed Option'}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={20} color="#013358" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                }}
+                style={styles.optionsList}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                ListEmptyComponent={
+                  <View style={styles.emptyList}>
+                    <Text style={styles.emptyText}>No options available</Text>
+                  </View>
+                }
+              />
+            ) : (
+              <View style={styles.emptyList}>
+                <Text style={styles.emptyText}>No options available</Text>
+              </View>
+            )}
+          </SafeAreaView>
+        ) : (
+          // Android Modal Content - With overlay
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity 
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => setModalVisible(false)}
             />
+            <View style={styles.androidModalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color="#374151" />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>{placeholder}</Text>
+                <View style={styles.headerSpacer} />
+              </View>
+              
+              <FlatList
+                data={safeOptions}
+                keyExtractor={(item, index) => item.value ? String(item.value) : `option-${index}`}
+                renderItem={({ item }) => {
+                  const isSelected = String(item.value) === String(selectedValue);
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.optionItem,
+                        isSelected && styles.selectedOption
+                      ]}
+                      onPress={() => {
+                        console.log('Option selected:', item.label, item.value);
+                        if (onValueChange) {
+                          onValueChange(item.value);
+                        }
+                        setModalVisible(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        isSelected && styles.selectedOptionText
+                      ]}>
+                        {item.label || 'Unnamed Option'}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={20} color="#013358" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                }}
+                style={styles.optionsList}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                ListEmptyComponent={
+                  <View style={styles.emptyList}>
+                    <Text style={styles.emptyText}>No options available</Text>
+                  </View>
+                }
+              />
+            </View>
           </View>
-        </View>
+        )}
       </Modal>
     </View>
   );
@@ -159,6 +250,10 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     minHeight: '40%',
   },
+  iosModalContent: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
   modalContent: {
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 16,
@@ -210,6 +305,16 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: '#013358',
     fontWeight: '500',
+  },
+  emptyList: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
 });
 

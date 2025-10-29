@@ -57,7 +57,10 @@ export default function ContactInfoStep({ control, errors, setValue, watch }) {
   const loadClusters = async () => {
     try {
       setLoadingClusters(true);
+      console.log('🔄 Loading clusters...');
+      
       const clusters = await clusterService.getClustersForDropdown();
+      console.log('📦 Clusters loaded:', clusters.length);
       
       const clusterOptionsData = [
         { label: 'Select Cluster', value: '' },
@@ -68,12 +71,21 @@ export default function ContactInfoStep({ control, errors, setValue, watch }) {
         }))
       ];
       
+      console.log('✅ Cluster options prepared:', clusterOptionsData.length);
       setClusterOptions(clusterOptionsData);
     } catch (error) {
-      console.error('Error loading clusters:', error);
+      console.error('❌ Error loading clusters:', error);
+      console.error('Error stack:', error.stack);
+      
+      const errorMessage = error.message.includes('Network request failed') 
+        ? 'Cannot connect to server. Please check your internet connection.'
+        : error.message.includes('Failed to fetch')
+        ? 'Server is not responding. Please try again later.'
+        : `Failed to load clusters: ${error.message}`;
+      
       Alert.alert(
-        'Error',
-        'Failed to load clusters. Please check your connection and try again.',
+        'Error Loading Clusters',
+        errorMessage,
         [
           { text: 'Retry', onPress: loadClusters },
           { text: 'Cancel', style: 'cancel' }
@@ -447,8 +459,12 @@ export default function ContactInfoStep({ control, errors, setValue, watch }) {
               <View>
                 <CustomSelect
                   options={clusterOptions}
-                  selectedValue={typeof value === 'string' ? value : ''}
-                  onValueChange={val => onChange(val)}
+                  selectedValue={value || ''}
+                  onValueChange={(val) => {
+                    console.log('Cluster selected:', val);
+                    console.log('Available clusters:', clusterOptions.length);
+                    onChange(val);
+                  }}
                   placeholder={loadingClusters ? "Loading clusters..." : "Select Cluster"}
                   error={!!errors.contactInfo?.cluster}
                   disabled={loadingClusters}

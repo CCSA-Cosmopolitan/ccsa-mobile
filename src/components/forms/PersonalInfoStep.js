@@ -149,8 +149,11 @@ export default function PersonalInfoStep({ control, errors }) {
             render={({ field: { onChange, value } }) => (
               <CustomSelect
                 options={GENDER_OPTIONS}
-                selectedValue={typeof value === 'string' ? value : ''}
-                onValueChange={val => onChange(val)}
+                selectedValue={value || ''}
+                onValueChange={(val) => {
+                  console.log('Gender selected:', val);
+                  onChange(val);
+                }}
                 placeholder="Select Gender"
                 error={!!errors.personalInfo?.gender}
               />
@@ -170,8 +173,11 @@ export default function PersonalInfoStep({ control, errors }) {
             render={({ field: { onChange, value } }) => (
               <CustomSelect
                 options={EMPLOYMENT_STATUS_OPTIONS}
-                selectedValue={typeof value === 'string' ? value : ''}
-                onValueChange={val => onChange(val)}
+                selectedValue={value || ''}
+                onValueChange={(val) => {
+                  console.log('Employment Status selected:', val);
+                  onChange(val);
+                }}
                 placeholder="Select Employment Status"
                 error={!!errors.personalInfo?.employmentStatus}
               />
@@ -191,8 +197,11 @@ export default function PersonalInfoStep({ control, errors }) {
             render={({ field: { onChange, value } }) => (
               <CustomSelect
                 options={MARITAL_STATUS_OPTIONS}
-                selectedValue={typeof value === 'string' ? value : ''}
-                onValueChange={val => onChange(val)}
+                selectedValue={value || ''}
+                onValueChange={(val) => {
+                  console.log('Marital Status selected:', val);
+                  onChange(val);
+                }}
                 placeholder="Select Marital Status"
                 error={!!errors.personalInfo?.maritalStatus}
               />

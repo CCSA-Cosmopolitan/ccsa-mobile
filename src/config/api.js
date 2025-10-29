@@ -1,7 +1,12 @@
+import Constants from 'expo-constants';
+
 // API Configuration
 const API_CONFIG = {
-  // Replace this with your actual backend API URL
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://172.20.10.4:3000', // Use environment variable or fallback
+  // Read from expo-constants (works in both dev and production builds)
+  // Falls back to app.config.js extra.apiBaseUrl, then to production URL
+  BASE_URL: Constants.expoConfig?.extra?.apiBaseUrl || 
+            process.env.EXPO_PUBLIC_API_BASE_URL || 
+            'https://fims.cosmopolitan.edu.ng',
   
   // API endpoints
   ENDPOINTS: {
@@ -17,6 +22,7 @@ const API_CONFIG = {
     AUTH: '/api/auth',
     ANALYTICS: '/api/analytics',
     HEALTH: '/api/health',
+    CLUSTERS: '/api/clusters',
     
     // NIN and SMS endpoints
     NIN_LOOKUP: '/api/nin/lookup',

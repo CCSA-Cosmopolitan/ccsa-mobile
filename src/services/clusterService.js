@@ -4,6 +4,7 @@ import API_CONFIG from '../config/api';
 class ClusterService {
   constructor() {
     this.baseURL = API_CONFIG.BASE_URL;
+    console.log('🔧 ClusterService initialized with BASE_URL:', this.baseURL);
   }
 
   /**
@@ -69,8 +70,29 @@ class ClusterService {
       if (params.limit) queryParams.append('limit', params.limit.toString());
 
       const endpoint = `/api/clusters${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const fullUrl = `${this.baseURL}${endpoint}`;
       
-      const data = await this.makeAuthenticatedRequest(endpoint);
+      console.log('🌐 Fetching clusters from:', fullUrl);
+      
+      // Make unauthenticated request for GET - clusters are public
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ API Error:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Clusters received:', data.clusters?.length || 0);
       
       return {
         clusters: data.clusters || [],
@@ -79,7 +101,12 @@ class ClusterService {
         currentPage: data.currentPage || 1,
       };
     } catch (error) {
-      console.error('Error fetching clusters:', error);
+      console.error('❌ Error fetching clusters:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        baseURL: this.baseURL
+      });
       throw new Error(`Failed to fetch clusters: ${error.message}`);
     }
   }
@@ -88,18 +115,28 @@ class ClusterService {
    * Get clusters formatted for dropdown/picker
    * @returns {Promise<Array>} Array of cluster options
    */
+
+
   async getClustersForDropdown() {
     try {
+      console.log('📋 Getting clusters for dropdown...');
       const data = await this.getClusters({ limit: 100 }); // Get all clusters
       
-      return data.clusters.map(cluster => ({
-        label: cluster.title,
-        value: cluster.id,
-        clusterLead: `${cluster.clusterLeadFirstName} ${cluster.clusterLeadLastName}`,
+      console.log('📊 Formatting', data.clusters.length, 'clusters for dropdown');
+      
+      const formattedClusters = data.clusters.map(cluster => ({
+        label: cluster.title || 'Unnamed Cluster',
+        value: cluster.id || cluster._id || '',
+        clusterLead: cluster.clusterLeadFirstName && cluster.clusterLeadLastName 
+          ? `${cluster.clusterLeadFirstName} ${cluster.clusterLeadLastName}`
+          : 'No Lead Assigned',
         farmerCount: cluster._count?.farmers || 0,
       }));
+      
+      console.log('✅ Formatted clusters:', formattedClusters.length);
+      return formattedClusters;
     } catch (error) {
-      console.error('Error fetching clusters for dropdown:', error);
+      console.error('❌ Error fetching clusters for dropdown:', error);
       throw new Error(`Failed to load clusters: ${error.message}`);
     }
   }

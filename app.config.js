@@ -81,9 +81,8 @@ export default ({ config }) => {
         projectId: "1deec560-5e59-4944-b0c4-7c9e028e7943"
       },
       // Environment-specific configuration
-      apiBaseUrl: isProduction 
-        ? "http://172.20.10.4:3000"
-        : process.env.EXPO_PUBLIC_API_BASE_URL || "http://172.20.10.4:3000"
+      // IMPORTANT: Use EXPO_PUBLIC_API_BASE_URL from EAS build environment
+      apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || "https://fims.cosmopolitan.edu.ng"
     },
     updates: {
       url: "https://u.expo.dev/ccsa-mobile-fims"

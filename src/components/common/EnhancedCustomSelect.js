@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 const EnhancedCustomSelect = ({ 
-  options, 
+  options = [], 
   selectedValue, 
   onValueChange, 
   placeholder = 'Select an option',
@@ -25,45 +25,56 @@ const EnhancedCustomSelect = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Ensure options is always an array
+  const safeOptions = Array.isArray(options) ? options : [];
+
   // Filter options based on search query
   const filteredOptions = searchable 
-    ? options.filter(option => 
-        option.label.toLowerCase().includes(searchQuery.toLowerCase())
+    ? safeOptions.filter(option => 
+        option.label && option.label.toLowerCase().includes(searchQuery.toLowerCase())
       ).filter((option, index, self) => 
         index === self.findIndex(o => o.value === option.value)
       )
-    : options;
+    : safeOptions;
 
   const handleSelect = (option) => {
-    onValueChange(option.value);
+    if (onValueChange) {
+      onValueChange(option.value);
+    }
     setModalVisible(false);
     setSearchQuery('');
   };
 
   const getSelectedOptionLabel = () => {
-    const selectedOption = options.find(option => option.value === selectedValue);
+    if (selectedValue === null || selectedValue === undefined) return placeholder;
+    const selectedOption = safeOptions.find(option => 
+      String(option.value) === String(selectedValue)
+    );
     return selectedOption ? selectedOption.label : placeholder;
   };
 
-  const renderOptionItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.optionItem,
-        item.value === selectedValue && styles.selectedOption
-      ]}
-      onPress={() => handleSelect(item)}
-    >
-      <Text style={[
-        styles.optionText,
-        item.value === selectedValue && styles.selectedOptionText
-      ]}>
-        {item.label}
-      </Text>
-      {item.value === selectedValue && (
-        <Ionicons name="checkmark" size={20} color="#013358" />
-      )}
-    </TouchableOpacity>
-  );
+  const renderOptionItem = ({ item }) => {
+    const isSelected = String(item.value) === String(selectedValue);
+    return (
+      <TouchableOpacity
+        style={[
+          styles.optionItem,
+          isSelected && styles.selectedOption
+        ]}
+        onPress={() => handleSelect(item)}
+      >
+        <Text style={[
+          styles.optionText,
+          isSelected && styles.selectedOptionText
+        ]}>
+          {item.label || 'Unnamed Option'}
+        </Text>
+        {isSelected && (
+          <Ionicons name="checkmark" size={20} color="#013358" />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -130,9 +141,16 @@ const EnhancedCustomSelect = ({
           <FlatList
             data={filteredOptions}
             renderItem={renderOptionItem}
-            keyExtractor={(item, index) => item.value || `option-${index}`}
+            keyExtractor={(item, index) => item.value ? String(item.value) : `option-${index}`}
             style={styles.optionsList}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyList}>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No matches found' : 'No options available'}
+                </Text>
+              </View>
+            }
           />
         </View>
       </Modal>
@@ -241,6 +259,16 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: '#013358',
     fontWeight: '500',
+  },
+  emptyList: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
 });
 

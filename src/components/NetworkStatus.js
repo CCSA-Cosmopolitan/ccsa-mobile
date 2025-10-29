@@ -23,7 +23,7 @@ const NetworkStatus = ({ onRetry, style }) => {
       clearTimeout(timeoutId);
       setIsConnected(response.ok);
     } catch (error) {
-      console.log('Network check failed:', error.message);
+      // console.log('Network check failed:', error.message);
       setIsConnected(false);
     }
   };
