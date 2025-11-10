@@ -7,6 +7,7 @@ import 'react-native-url-polyfill/auto';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/store/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import NetworkStatusBanner from './src/components/NetworkStatusBanner';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <AuthProvider>
             <NavigationContainer>
               <AppNavigator />
+              <NetworkStatusBanner />
               <StatusBar 
                 style="dark" 
                 backgroundColor="transparent"

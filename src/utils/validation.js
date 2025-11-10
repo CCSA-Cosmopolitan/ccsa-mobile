@@ -76,19 +76,19 @@ export const refereeSchema = z.object({
 
 // Farm info schema with required fields for comprehensive data collection
 export const farmInfoSchema = z.object({
-  farmLocation: z.string().optional(), // Made optional as mentioned in form
-  farmSize: z.string().optional(), // This will be calculated automatically
-  farmCategory: z.string().optional(), // Made optional as mentioned in form
-  landforms: z.enum(['lowland', 'highland']).optional(), // Made optional
-  farmOwnership: z.string().optional(), // Made optional
+  farmLocation: z.string().optional(),
+  farmSize: z.string().optional(), // This will be calculated automatically from polygon
+  farmCategory: z.string().min(1, 'Farm category is required'),
+  landforms: z.enum(['lowland', 'highland'], { required_error: 'Landform type is required' }),
+  farmOwnership: z.string().min(1, 'Farm ownership is required'),
   state: z.string().min(1, 'State is required'),
   localGovernment: z.string().min(1, 'Local Government is required'),
   ward: z.string().min(1, 'Ward is required'),
   pollingUnit: z.string().min(1, 'Polling Unit is required'),
-  primaryCrop: z.string().optional(), // Made optional based on category selection
+  primaryCrop: z.string().min(1, 'Primary crop is required'),
   secondaryCrop: z.array(z.string()).optional(), // Allow array for multiple crops
-  farmSeason: z.string().optional(), // Made optional
-  farmingExperience: z.string().optional(), // Added farming experience
+  farmSeason: z.string().min(1, 'Farm season is required'),
+  farmingExperience: z.string().min(1, 'Farming experience is required'),
   coordinates: z.object({
     latitude: z.number({ required_error: 'Farm latitude is required' }),
     longitude: z.number({ required_error: 'Farm longitude is required' }),
@@ -96,7 +96,7 @@ export const farmInfoSchema = z.object({
   farmPolygon: z.array(z.object({
     latitude: z.number(),
     longitude: z.number(),
-  })).optional().default([]), // Made optional with default empty array
+  })).min(3, 'Farm boundary must have at least 3 points to form a valid polygon'), // Made required with minimum
 });
 
 // Complete farmer schema

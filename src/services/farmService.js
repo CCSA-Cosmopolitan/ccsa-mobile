@@ -1,5 +1,6 @@
 import { auth } from './firebase';
 import API_CONFIG from '../config/api';
+import { offlineCacheService } from './offlineCacheService';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -70,27 +71,51 @@ export const farmService = {
   }
 },
 
-  // Get all farms for a farmer
-  async getFarmsByFarmer(farmerId) {
+  // Get all farms for a farmer (with offline support)
+  async getFarmsByFarmer(farmerId, forceRefresh = false) {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/api/farms/farmer/${farmerId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
+      // Use cache service for offline-first approach
+      const farms = await offlineCacheService.fetchWithCache(
+        `@cache_farms_${farmerId}`,
+        async () => {
+          // Fetch from API
+          const token = await getAuthToken();
+          
+          const response = await fetch(`${API_BASE_URL}/api/farms/farmer/${farmerId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to fetch farms');
+          }
+
+          const data = await response.json();
+          const farmsData = data.farms || [];
+          
+          // Cache the farms
+          await offlineCacheService.cacheFarmsByFarmer(farmerId, farmsData);
+          
+          return farmsData;
         },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch farms');
-      }
-
-      const data = await response.json();
-      return data.farms || []; // Extract farms array from response
+        24 * 60 * 60 * 1000, // 24 hour expiry
+        forceRefresh
+      );
+      
+      return farms;
     } catch (error) {
       console.error('Fetch farms error:', error);
+      
+      // Try to get cached data as fallback
+      const cachedFarms = await offlineCacheService.getCachedFarmsByFarmer(farmerId);
+      if (cachedFarms) {
+        console.log('✅ Using cached farms after error');
+        return cachedFarms;
+      }
+      
       throw error;
     }
   },

@@ -1,5 +1,6 @@
 import { auth } from './firebase';
 import API_CONFIG from '../config/api';
+import { offlineCacheService } from './offlineCacheService';
 
 class ClusterService {
   constructor() {
@@ -117,26 +118,45 @@ class ClusterService {
    */
 
 
-  async getClustersForDropdown() {
+  async getClustersForDropdown(forceRefresh = false) {
     try {
       console.log('📋 Getting clusters for dropdown...');
-      const data = await this.getClusters({ limit: 100 }); // Get all clusters
       
-      console.log('📊 Formatting', data.clusters.length, 'clusters for dropdown');
-      
-      const formattedClusters = data.clusters.map(cluster => ({
-        label: cluster.title || 'Unnamed Cluster',
-        value: cluster.id || cluster._id || '',
-        clusterLead: cluster.clusterLeadFirstName && cluster.clusterLeadLastName 
-          ? `${cluster.clusterLeadFirstName} ${cluster.clusterLeadLastName}`
-          : 'No Lead Assigned',
-        farmerCount: cluster._count?.farmers || 0,
-      }));
+      // Use cache service for offline support
+      const formattedClusters = await offlineCacheService.fetchWithCache(
+        '@cache_clusters_dropdown',
+        async () => {
+          const data = await this.getClusters({ limit: 100 });
+          
+          console.log('📊 Formatting', data.clusters.length, 'clusters for dropdown');
+          
+          const formatted = data.clusters.map(cluster => ({
+            label: cluster.title || 'Unnamed Cluster',
+            value: cluster.id || cluster._id || '',
+            clusterLead: cluster.clusterLeadFirstName && cluster.clusterLeadLastName 
+              ? `${cluster.clusterLeadFirstName} ${cluster.clusterLeadLastName}`
+              : 'No Lead Assigned',
+            farmerCount: cluster._count?.farmers || 0,
+          }));
+          
+          return formatted;
+        },
+        7 * 24 * 60 * 60 * 1000, // 7 days expiry (clusters rarely change)
+        forceRefresh
+      );
       
       console.log('✅ Formatted clusters:', formattedClusters.length);
       return formattedClusters;
     } catch (error) {
       console.error('❌ Error fetching clusters for dropdown:', error);
+      
+      // Try to get cached data as fallback
+      const cached = await offlineCacheService.getCache('@cache_clusters_dropdown', null);
+      if (cached) {
+        console.log('✅ Using cached clusters after error');
+        return cached;
+      }
+      
       throw new Error(`Failed to load clusters: ${error.message}`);
     }
   }

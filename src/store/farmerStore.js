@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { farmerService } from '../services/farmerService';
 import { auth } from '../services/firebase';
+import { offlineCacheService } from '../services/offlineCacheService';
 
 export const useFarmerStore = create((set, get) => ({
   farmers: [],
   loading: false,
   error: null,
+  isOffline: false,
 
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
@@ -39,7 +41,7 @@ export const useFarmerStore = create((set, get) => ({
   },
 
   // Add the missing fetchFarmers function that components are trying to use
-  fetchFarmers: async () => {
+  fetchFarmers: async (forceRefresh = false) => {
     try {
       set({ loading: true, error: null });
       
@@ -48,34 +50,55 @@ export const useFarmerStore = create((set, get) => ({
         throw new Error('User not authenticated');
       }
       
-      // Call the API with pagination
-      const response = await farmerService.getFarmers(1, 1000);
+      // Use cache service for offline-first approach
+      const farmers = await offlineCacheService.fetchWithCache(
+        '@cache_farmers',
+        async () => {
+          // This function is called when cache miss or force refresh
+          const response = await farmerService.getFarmers(1, 1000);
+          
+          // Extract farmers array from the paginated response
+          let farmersData = [];
+          if (response) {
+            if (Array.isArray(response)) {
+              farmersData = response;
+            } else if (response.farmers && Array.isArray(response.farmers)) {
+              farmersData = response.farmers;
+            } else if (response.data && Array.isArray(response.data)) {
+              farmersData = response.data;
+            }
+          }
+          
+          return farmersData;
+        },
+        24 * 60 * 60 * 1000, // 24 hour expiry
+        forceRefresh
+      );
       
-      // Extract farmers array from the paginated response
-      let farmers = [];
-      if (response) {
-        if (Array.isArray(response)) {
-          // If response is directly an array
-          farmers = response;
-        } else if (response.farmers && Array.isArray(response.farmers)) {
-          // If response has farmers property
-          farmers = response.farmers;
-        } else if (response.data && Array.isArray(response.data)) {
-          // If response has data property
-          farmers = response.data;
-        } else {
-          farmers = [];
-        }
-      }
+      const isOnline = await offlineCacheService.checkOnline();
+      set({ farmers, loading: false, isOffline: !isOnline });
       
-      set({ farmers, loading: false });
       return farmers;
     } catch (error) {
       console.error('Error fetching farmers:', error);
       
+      // Try to get cached data even if expired
+      const cachedFarmers = await offlineCacheService.getCachedFarmers();
+      if (cachedFarmers) {
+        console.log('✅ Using cached farmers after error');
+        set({ 
+          farmers: cachedFarmers,
+          loading: false, 
+          isOffline: true,
+          error: 'Using offline data'
+        });
+        return cachedFarmers;
+      }
+      
       set({ 
         farmers: [],
         loading: false, 
+        isOffline: true,
         error: error.message 
       });
       throw error;
