@@ -218,7 +218,7 @@ export default function PersonalInfoStep({ control, errors }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    paddingBottom: 24,
   },
   header: {
     alignItems: 'center',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    flex: 1,
+    width: '100%',
   },
   inputGroup: {
     marginBottom: 20,

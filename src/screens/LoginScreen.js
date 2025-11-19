@@ -218,6 +218,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -229,6 +230,10 @@ const styles = StyleSheet.create({
     top: 32,
     left: 0,
     padding: 8,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
   },
   logoContainer: {
     width: 80,
@@ -251,7 +256,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    flex: 1,
+    width: '100%',
   },
   inputGroup: {
     marginBottom: 24,

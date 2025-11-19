@@ -14,9 +14,9 @@ const CROPS = [
   'Maize', 'Rice', 'Cassava', 'Yam', 'Cocoa', 'Oil Palm', 'Plantain', 'Banana',
   'Tomato', 'Pepper', 'Onion', 'Okra', 'Beans', 'Groundnut', 'Sesame', 'Cotton',
   'Sorghum', 'Millet', 'Cowpea', 'Soybean', 'Sweet Potato', 'Irish Potato',
-  'Watermelon', 'Cucumber', 'Lettuce', 'Cabbage', 'Carrot', 'Spinach',
-  'Pineapple', 'Mango', 'Orange', 'Lemon', 'Guava', 'Papaya',
-  'Coffee', 'Tea', 'Ginger', 'Turmeric', 'Garlic'
+  'Wheat', 'Watermelon', 'Cucumber', 'Lettuce', 'Cabbage', 'Carrot', 'Spinach',
+  'Pineapple', 'Mango', 'Orange', 'Lemon', 'Guava', 'Papaya', 'Avocado',
+  'Coffee', 'Tea', 'Ginger', 'Turmeric', 'Garlic', 'Cinnamon', 'Cloves', 'Nutmeg'
 ];
 
 export default function CropSelect({ selectedValue, onValueChange, placeholder, error }) {

@@ -209,7 +209,7 @@ export default function RefereeInfoStep({ control, errors, watch, setValue }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    paddingBottom: 24,
   },
   header: {
     alignItems: 'center',
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    flex: 1,
+    width: '100%',
   },
   refereeContainer: {
     backgroundColor: '#f8fafc',

@@ -124,8 +124,9 @@ export default function BankInfoStep({ control, errors }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingBottom: 24,
   },
   header: {
     alignItems: 'center',
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   form: {
-    flex: 1,
+    width: '100%',
   },
   inputGroup: {
     marginBottom: 20,

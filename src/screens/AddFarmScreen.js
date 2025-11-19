@@ -115,7 +115,7 @@ export default function AddFarmScreen({ navigation, route }) {
         farmLocation: '',
         farmSize: '',
         farmCategory: '',
-        landforms: '',
+        landforms: 'lowland',
         farmOwnership: '',
         state: '',
         localGovernment: '',
@@ -306,13 +306,30 @@ export default function AddFarmScreen({ navigation, route }) {
   const onFormError = (errors) => {
     // Get first error message to show user
     const errorPaths = Object.keys(errors);
-    const firstErrorPath = errorPaths[0];
-    const firstError = errors[firstErrorPath];
-    const errorMessage = firstError?.message || 'Please check the form for errors';
+    
+    // Helper function to find first error in nested objects
+    const findFirstError = (obj, prefix = '') => {
+      for (const key in obj) {
+        const fullPath = prefix ? `${prefix}.${key}` : key;
+        const error = obj[key];
+        if (error?.message) {
+          return { path: fullPath, message: error.message };
+        }
+        if (typeof error === 'object' && error !== null && !Array.isArray(error)) {
+          const nested = findFirstError(error, fullPath);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+
+    const firstErrorInfo = findFirstError(errors);
+    const errorPath = firstErrorInfo?.path || errorPaths[0] || 'Unknown field';
+    const errorMessage = firstErrorInfo?.message || 'Please check the form for errors';
     
     Alert.alert(
       'Form Validation Error', 
-      `${firstErrorPath}: ${errorMessage}\n\nTotal errors: ${errorPaths.length}`,
+      `Field: ${errorPath}\n\nError: ${errorMessage}\n\nTotal errors: ${errorPaths.length}`,
       [
         { text: 'Fix Errors', style: 'cancel' },
         { 

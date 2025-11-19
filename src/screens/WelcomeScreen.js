@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingVertical: 32,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
