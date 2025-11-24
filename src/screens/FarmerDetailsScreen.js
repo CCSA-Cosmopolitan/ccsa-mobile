@@ -13,6 +13,7 @@ import { useFarmerStore } from '../store/farmerStore';
 import { farmService } from '../services/farmService';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import PolygonMapMobile from '../components/PolygonMapMobile';
 
 const FarmerDetailsScreen = ({ route, navigation }) => {
   const { farmerId, farmer } = route.params;
@@ -193,6 +194,18 @@ const FarmerDetailsScreen = ({ route, navigation }) => {
                   <Text style={styles.coordinates}>
                     📍 {farm.farmLatitude}, {farm.farmLongitude}
                   </Text>
+                )}
+                {/* Polygon Preview */}
+                {farm.farmPolygon && farm.farmPolygon.length >= 3 && (
+                  <View style={styles.polygonSection}>
+                    <Text style={styles.polygonLabel}>Farm Boundary Map:</Text>
+                    <PolygonMapMobile 
+                      polygonData={farm.farmPolygon}
+                      width={280}
+                      height={180}
+                      showCoordinates={true}
+                    />
+                  </View>
                 )}
               </View>
             ))
@@ -476,6 +489,18 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  polygonSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+  },
+  polygonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
   },
   loadingFarms: {
     flexDirection: 'row',

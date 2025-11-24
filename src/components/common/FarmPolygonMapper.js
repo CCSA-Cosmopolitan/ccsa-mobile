@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import PolygonMapMobile from '../PolygonMapMobile';
 
 export default function FarmPolygonMapper({ onPolygonUpdate, initialPolygon = [] }) {
   const [isMapping, setIsMapping] = useState(false);
@@ -233,6 +234,19 @@ export default function FarmPolygonMapper({ onPolygonUpdate, initialPolygon = []
         </View>
       )}
 
+      {/* Polygon Preview */}
+      {polygonPoints.length >= 3 && (
+        <View style={styles.polygonPreview}>
+          <Text style={styles.previewTitle}>Farm Boundary Preview:</Text>
+          <PolygonMapMobile 
+            polygonData={polygonPoints}
+            width={320}
+            height={200}
+            showCoordinates={false}
+          />
+        </View>
+      )}
+
       {/* Mapping Modal */}
       <Modal
         visible={modalVisible}
@@ -415,6 +429,18 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  polygonPreview: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
   },
   modalContainer: {
     flex: 1,
