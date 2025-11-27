@@ -238,12 +238,14 @@ export default function FarmPolygonMapper({ onPolygonUpdate, initialPolygon = []
       {polygonPoints.length >= 3 && (
         <View style={styles.polygonPreview}>
           <Text style={styles.previewTitle}>Farm Boundary Preview:</Text>
-          <PolygonMapMobile 
-            polygonData={polygonPoints}
-            width={320}
-            height={200}
-            showCoordinates={false}
-          />
+          <View style={styles.polygonMapContainer}>
+            <PolygonMapMobile 
+              polygonData={polygonPoints}
+              width={350}
+              height={250}
+              showCoordinates={false}
+            />
+          </View>
         </View>
       )}
 
@@ -441,6 +443,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     marginBottom: 12,
+  },
+  polygonMapContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalContainer: {
     flex: 1,

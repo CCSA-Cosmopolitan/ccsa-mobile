@@ -199,12 +199,14 @@ const FarmerDetailsScreen = ({ route, navigation }) => {
                 {farm.farmPolygon && farm.farmPolygon.length >= 3 && (
                   <View style={styles.polygonSection}>
                     <Text style={styles.polygonLabel}>Farm Boundary Map:</Text>
-                    <PolygonMapMobile 
-                      polygonData={farm.farmPolygon}
-                      width={280}
-                      height={180}
-                      showCoordinates={true}
-                    />
+                    <View style={styles.polygonMapContainer}>
+                      <PolygonMapMobile 
+                        polygonData={farm.farmPolygon}
+                        width={350}
+                        height={250}
+                        showCoordinates={true}
+                      />
+                    </View>
                   </View>
                 )}
               </View>
@@ -501,6 +503,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
+  },
+  polygonMapContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingFarms: {
     flexDirection: 'row',
