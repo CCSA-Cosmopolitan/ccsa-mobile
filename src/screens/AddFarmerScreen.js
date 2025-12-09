@@ -437,6 +437,7 @@ export default function AddFarmerScreen({ navigation }) {
       setNinValidated(true);
       
       // Pre-fill form with fetched data (mapping from NIN API structure)
+      // Set personal info from NIMC (name, DOB, gender, marital status, employment, photo)
       setValue('personalInfo.firstName', ninData.firstName || '');
       setValue('personalInfo.middleName', ninData.middleName || '');
       setValue('personalInfo.lastName', ninData.lastName || '');
@@ -446,11 +447,14 @@ export default function AddFarmerScreen({ navigation }) {
       setValue('personalInfo.employmentStatus', ninData.employmentStatus || '');
       setValue('personalInfo.photoUrl', ninData.photoUrl || ''); // Set photoUrl from NIN data
       
-      // Address information from NIN data (set both personalInfo and contactInfo)
+      // Store NIMC location data in personalInfo for reference only
       setValue('personalInfo.state', ninData.state || '');
       setValue('personalInfo.lga', ninData.lga || '');
-      setValue('contactInfo.state', ninData.state || '');
-      setValue('contactInfo.localGovernment', ninData.lga || '');
+      
+      // DO NOT set contactInfo location fields from NIMC data
+      // User must select these from form dropdowns to avoid *** values
+      // contactInfo.state, localGovernment, ward, and pollingUnit remain empty
+      // and will be filled by user through form selection
       
       return ninData;
     } catch (error) {
