@@ -242,6 +242,10 @@ export const ninService = {
             } else if (authResponse.status === 429) {
               throw new Error('Too many requests. Please wait a moment and try again.');
             } else if (authResponse.status >= 500) {
+              // Check if we have a specific error message about service inactivity
+              if (authError.message && (authError.message.toLowerCase().includes('inactive') || authError.message.toLowerCase().includes('suspended'))) {
+                throw new Error(authError.message);
+              }
               throw new Error('Server error. Please try again later.');
             } else {
               throw new Error(authError.error || authError.message || `Server returned error (${authResponse.status})`);

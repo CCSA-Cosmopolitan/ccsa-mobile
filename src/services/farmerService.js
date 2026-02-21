@@ -145,13 +145,17 @@ export const farmerService = {
     return data;
   },
 
-  async getFarmers(page = 1, limit = 10, search = '') {
-    console.log('🔍 farmerService.getFarmers called with:', { page, limit, search });
+  async getFarmers(page = 1, limit = 100, search = '', state = '', cluster = '', status = '', loadAll = false) {
+    console.log('🔍 farmerService.getFarmers called with:', { page, limit, search, state, cluster, status, loadAll });
     
     const queryParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...(search && { search }),
+      ...(state && { state }),
+      ...(cluster && { cluster }),
+      ...(status && { status }),
+      ...(loadAll && { loadAll: 'true' }),
     });
     
     const url = `${API_BASE_URL}/api/farmers?${queryParams}`;
@@ -164,8 +168,9 @@ export const farmerService = {
       console.log('🔍 Response keys:', Object.keys(data || {}));
       
       if (data?.farmers) {
-        console.log('🔍 Farmers array length:', data.farmers.length);
+        console.log(`🔍 Loaded ${data.farmers.length} farmers${loadAll ? ' (ALL)' : ''}`);
         console.log('🔍 First farmer sample:', data.farmers[0]);
+        console.log('🔍 Pagination:', data.pagination);
       }
       
       return data;

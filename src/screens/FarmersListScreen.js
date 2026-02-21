@@ -17,10 +17,11 @@ import { useFarmerStore } from '../store/farmerStore';
 import LoadingScreen from './LoadingScreen';
 
 export default function FarmersListScreen({ navigation }) {
-  const { farmers, loading, fetchFarmers } = useFarmerStore();
+  const { farmers, loading, fetchFarmers, loadMoreFarmers, pagination, totalCount } = useFarmerStore();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredFarmers, setFilteredFarmers] = useState([]);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Use useFocusEffect to reload farmers when screen comes into focus
   useFocusEffect(
@@ -47,12 +48,27 @@ export default function FarmersListScreen({ navigation }) {
     
     try {
       console.log('📱 FarmersListScreen: Loading farmers...');
-      await fetchFarmers();
+      await fetchFarmers(true); // Reset and fetch first page
       console.log('📱 FarmersListScreen: Farmers loaded, count:', farmers?.length || 0);
-      console.log('📱 FarmersListScreen: Current farmers state:', farmers);
+      console.log('📱 FarmersListScreen: Total count:', totalCount);
     } catch (error) {
       console.error('📱 FarmersListScreen: Error loading farmers:', error);
       Alert.alert('Error', `Failed to load farmers: ${error.message}`);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (loadingMore || loading || !pagination?.hasMore) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      await loadMoreFarmers();
+    } catch (error) {
+      console.error('📱 Error loading more farmers:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -191,7 +207,8 @@ export default function FarmersListScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.title}>Registered Farmers</Text>
         <Text style={styles.subtitle}>
-          {farmers?.length || 0} farmer{(farmers?.length || 0) !== 1 ? 's' : ''} registered
+          {totalCount || farmers?.length || 0} farmer{(totalCount || farmers?.length || 0) !== 1 ? 's' : ''} registered
+          {farmers?.length > 0 && farmers.length < (totalCount || 0) && ` (Showing ${farmers.length})`}
         </Text>
       </View>
 
@@ -228,6 +245,27 @@ export default function FarmersListScreen({ navigation }) {
         }
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() => {
+          if (loadingMore) {
+            return (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: '#6b7280' }}>Loading more...</Text>
+              </View>
+            );
+          }
+          if (pagination?.hasMore) {
+            return (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: '#9ca3af', fontSize: 12 }}>
+                  Scroll down to load more
+                </Text>
+              </View>
+            );
+          }
+          return null;
+        }}
       />
 
       {/* Floating Add Button */}
