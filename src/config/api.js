@@ -24,6 +24,21 @@ const API_CONFIG = {
     HEALTH: '/api/health',
     CLUSTERS: '/api/clusters',
     
+    // Mobile authentication bridge
+    MOBILE_AUTH_ME: '/api/mobile/auth/me',
+
+    // Data correction module
+    CORRECTION_FARMERS: '/api/mobile/correction/farmers',
+
+    // Survey module
+    MOBILE_SURVEYS: '/api/mobile/surveys',
+    MOBILE_SURVEY_DETAIL: '/api/mobile/surveys/:id',
+    MOBILE_SURVEY_FARMERS: '/api/mobile/surveys/farmers',
+    MOBILE_SURVEY_RESPONSES: '/api/mobile/surveys/:id/responses',
+
+    // Agent application (public — no auth required)
+    AGENT_APPLY: '/api/agents/apply',
+
     // NIN and SMS endpoints
     NIN_LOOKUP: '/api/nin/lookup',
     TEMP_NIN_LOOKUP: '/api/temp-nin/lookup',

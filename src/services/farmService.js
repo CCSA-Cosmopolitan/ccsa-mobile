@@ -4,9 +4,23 @@ import { offlineCacheService } from './offlineCacheService';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
+// Wait for Firebase to restore auth state before reading currentUser.
+// auth.currentUser is null during the brief window after cold start.
+const waitForAuthUser = () =>
+  new Promise((resolve, reject) => {
+    if (auth.currentUser) {
+      resolve(auth.currentUser);
+      return;
+    }
+    const unsub = auth.onAuthStateChanged((user) => {
+      unsub();
+      if (user) resolve(user);
+      else reject(new Error('User not authenticated'));
+    });
+  });
+
 const getAuthToken = async () => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('User not authenticated');
+  const user = await waitForAuthUser();
   return await user.getIdToken();
 };
 
@@ -16,7 +30,7 @@ export const farmService = {
     try {
       const token = await getAuthToken();
       
-      const requestUrl = `${API_BASE_URL}/api/farms`;
+      const requestUrl = `${API_BASE_URL}/api/mobile/farms`;
       
       const requestBody = {
         farmerId,
@@ -81,7 +95,7 @@ export const farmService = {
           // Fetch from API
           const token = await getAuthToken();
           
-          const response = await fetch(`${API_BASE_URL}/api/farms/farmer/${farmerId}`, {
+          const response = await fetch(`${API_BASE_URL}/api/mobile/farms/farmer/${farmerId}`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -125,7 +139,7 @@ export const farmService = {
     try {
       const token = await getAuthToken();
       
-      const response = await fetch(`${API_BASE_URL}/api/farms/${farmId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/farms/${farmId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +165,7 @@ export const farmService = {
     try {
       const token = await getAuthToken();
       
-      const response = await fetch(`${API_BASE_URL}/api/farms/${farmId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/farms/${farmId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -175,7 +189,7 @@ export const farmService = {
     try {
       const token = await getAuthToken();
       
-      const response = await fetch(`${API_BASE_URL}/api/farms/${farmId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/farms/${farmId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

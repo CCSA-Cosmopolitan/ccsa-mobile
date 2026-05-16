@@ -1,194 +1,208 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Image,
-  SafeAreaView,
-  Platform,
-  Alert,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function WelcomeScreen({ navigation }) {
+const MODULES = [
+  {
+    key: 'enrollment',
+    icon: 'leaf-outline',
+    title: 'Farm Enrollment',
+    desc: 'Register farmers and capture farm data',
+  },
+  {
+    key: 'correction',
+    icon: 'create-outline',
+    title: 'Data Correction',
+    desc: 'Review and update existing farmer records',
+  },
+  {
+    key: 'survey',
+    icon: 'clipboard-outline',
+    title: 'Surveys',
+    desc: 'Conduct structured field questionnaires',
+  },
+];
 
-  const handleGetStarted = () => {
-    navigation.navigate('Login');
-  };
+export default function WelcomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Logo/Header Section */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/icon.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.title}>CCSA FIMS</Text>
-          <Text style={styles.subtitle}>
-            Farmers Information Management System
-          </Text>
-          {/* <Text style={styles.description}>
-            Register and manage Nigerian farmers' data with advanced features including geolocation, search, and certificate generation.
-          </Text> */}
+    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.inner}>
+        {/* Logo + brand */}
+        <View style={styles.brand}>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandName}>CCSA FIMS</Text>
+          <Text style={styles.brandSub}>Field Operations Platform</Text>
         </View>
 
-        {/* Features Section */}
-        <View style={styles.features}>
-          <View style={styles.feature}>
-            <Ionicons name="person-add" size={24} color="#013358" />
-            <Text style={styles.featureText}>Register Farmers</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="location" size={24} color="#013358" />
-            <Text style={styles.featureText}>GPS & Mapping</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="search" size={24} color="#013358" />
-            <Text style={styles.featureText}>Search & Analytics</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="document" size={24} color="#013358" />
-            <Text style={styles.featureText}>Generate Certificates</Text>
-          </View>
-        </View>
+        {/* Divider */}
+        <View style={styles.divider} />
 
-        {/* Action Buttons */}
-        <View style={styles.buttons}>
+        {/* Module list */}
+        <Text style={styles.sectionLabel}>Select a module to continue</Text>
+
+        {MODULES.map((mod) => (
           <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleGetStarted}
+            key={mod.key}
+            style={styles.moduleRow}
+            onPress={() => navigation.navigate('Login', { module: mod.key })}
+            activeOpacity={0.7}
           >
-            <Text style={styles.primaryButtonText}>Login</Text>
+            <View style={styles.moduleIconWrap}>
+              <Ionicons name={mod.icon} size={22} color="#013358" />
+            </View>
+            <View style={styles.moduleBody}>
+              <Text style={styles.moduleTitle}>{mod.title}</Text>
+              <Text style={styles.moduleDesc}>{mod.desc}</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#cbd5e1" />
           </TouchableOpacity>
-          
-          {/* <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.secondaryButtonText}>Create Account</Text>
-          </TouchableOpacity> */}
-        </View>
+        ))}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            For Enrolment Agents Only
-          </Text>
+        {/* Apply button */}
+        <TouchableOpacity
+          style={styles.applyButton}
+          onPress={() => navigation.navigate('Apply')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.applyButtonText}>Apply as Field Agent</Text>
+        </TouchableOpacity>
         </View>
-      </View>
-    </SafeAreaView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    padding: 8,
     backgroundColor: '#ffffff',
   },
-  content: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  header: {
+  inner: {
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 48,
   },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#f0fdf4',
-    justifyContent: 'center',
+
+  // Brand
+  brand: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
+    width: '100%',
   },
   logo: {
-    width: 100,
-    height: 100,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#6b7280',
-    textAlign: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     marginBottom: 16,
   },
-  description: {
-    fontSize: 16,
-    color: '#9ca3af',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  features: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 48,
-  },
-  feature: {
-    width: '48%',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  featureText: {
-    fontSize: 14,
-    color: '#374151',
-    marginTop: 8,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  buttons: {
-    gap: 16,
-    marginBottom: 32,
-  },
-  primaryButton: {
-    backgroundColor: '#013358',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#013358',
-  },
-  secondaryButtonText: {
+  brandName: {
+    fontSize: 24,
+    fontWeight: '800',
     color: '#013358',
-    fontSize: 18,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  brandSub: {
+    fontSize: 13,
+    color: '#94a3b8',
+    textAlign: 'center',
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginBottom: 24,
+    width: '100%',
+  },
+
+  sectionLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 16,
+    width: '100%',
   },
-  footer: {
+
+  // Module rows
+  moduleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    width: '100%',
+    borderWidth: 1.5,
+    borderColor: '#c7d2e0',
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
   },
-  footerText: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontStyle: 'italic',
+  moduleIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#f0f6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  moduleBody: {
+    flex: 1,
+  },
+  moduleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  moduleDesc: {
+    fontSize: 12,
+    color: '#64748b',
+    lineHeight: 17,
+  },
+
+  // Apply button
+  applyButton: {
+    marginTop: 24,
+    width: '100%',
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  applyButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
   },
 });
+

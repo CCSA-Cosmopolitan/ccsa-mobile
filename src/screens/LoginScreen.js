@@ -18,7 +18,50 @@ import { loginSchema } from '../utils/validation';
 import { useAuth } from '../store/AuthContext';
 import LoadingScreen from './LoadingScreen';
 
-export default function LoginScreen({ navigation }) {
+// Per-module header config
+const MODULE_CONFIG = {
+  enrollment: {
+    icon: 'leaf',
+    iconBg: '#dbeafe',
+    iconColor: '#013358',
+    title: 'Farm Enrollment',
+    subtitle: 'Sign in to register farmers and capture farm data',
+  },
+  correction: {
+    icon: 'create-outline',
+    iconBg: '#fef3c7',
+    iconColor: '#92400e',
+    title: 'Data Correction',
+    subtitle: 'Sign in to review and update farmer records',
+  },
+  survey: {
+    icon: 'clipboard-outline',
+    iconBg: '#d1fae5',
+    iconColor: '#065f46',
+    title: 'Surveys',
+    subtitle: 'Sign in to conduct field questionnaires',
+  },
+};
+
+// Roles allowed per module — admin can log in anywhere
+const MODULE_ROLES = {
+  enrollment: ['agent', 'admin'],
+  correction: ['data_correction_agent', 'admin'],
+  survey:     ['survey_agent', 'admin'],
+};
+
+const DEFAULT_CONFIG = {
+  icon: 'leaf',
+  iconBg: '#f0fdf4',
+  iconColor: '#10b981',
+  title: 'Welcome Back',
+  subtitle: 'Sign in to access your FIMS dashboard',
+};
+
+export default function LoginScreen({ navigation, route }) {
+  const module = route?.params?.module;
+  const headerCfg = MODULE_CONFIG[module] ?? DEFAULT_CONFIG;
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, resetPassword } = useAuth();
@@ -39,7 +82,8 @@ export default function LoginScreen({ navigation }) {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      await signIn(data.email, data.password);
+      const requiredRoles = module ? (MODULE_ROLES[module] ?? null) : null;
+      await signIn(data.email, data.password, requiredRoles);
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Please check your credentials');
     } finally {
@@ -109,14 +153,12 @@ export default function LoginScreen({ navigation }) {
               <Ionicons name="arrow-back" size={24} color="#374151" />
             </TouchableOpacity>
             
-            <View style={styles.logoContainer}>
-              <Ionicons name="leaf" size={60} color="#10b981" />
+            <View style={[styles.logoContainer, { backgroundColor: headerCfg.iconBg }]}>
+              <Ionicons name={headerCfg.icon} size={60} color={headerCfg.iconColor} />
             </View>
             
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>
-              Sign in to access your FIMS dashboard
-            </Text>
+            <Text style={styles.title}>{headerCfg.title}</Text>
+            <Text style={styles.subtitle}>{headerCfg.subtitle}</Text>
           </View>
 
           {/* Form */}

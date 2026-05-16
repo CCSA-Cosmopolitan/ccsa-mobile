@@ -1,5 +1,44 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../services/firebase';
+import API_CONFIG from '../config/api';
+
+const FIMS_CACHE_PREFIX = '@fims_profile_';
+
+// Fetch role + profile from FIMS platform using Firebase ID token.
+// Returns profile object on success, { __deactivated: true } on 403, null on any other failure.
+const fetchFimsProfile = async (firebaseUser) => {
+  try {
+    const idToken = await firebaseUser.getIdToken();
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/mobile/auth/me`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (response.status === 403) return { __deactivated: true };
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
+// Build enriched user object merging Firebase identity with FIMS profile.
+const buildUserData = (firebaseUser, fimsProfile) => ({
+  id: firebaseUser.uid,
+  email: firebaseUser.email,
+  displayName:
+    firebaseUser.displayName ??
+    fimsProfile?.displayName ??
+    fimsProfile?.firstName ??
+    null,
+  emailVerified: firebaseUser.emailVerified,
+  createdAt: firebaseUser.metadata?.creationTime,
+  lastSignInTime: firebaseUser.metadata?.lastSignInTime,
+  // FIMS enrichment — defaults preserve existing enrollment-agent behaviour
+  role: fimsProfile?.role ?? 'agent',
+  fimsUserId: fimsProfile?.userId ?? null,
+  firstName: fimsProfile?.firstName ?? null,
+  lastName: fimsProfile?.lastName ?? null,
+});
 
 const AuthContext = createContext({});
 
@@ -17,69 +56,64 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    console.log('🔥 AuthProvider initializing...');
-    
     if (!auth) {
-      console.error('🔥 Firebase auth is not initialized');
       setError('Firebase authentication service is not available');
       setLoading(false);
       return;
     }
 
-    console.log('🔥 Setting up auth state listener...');
-    console.log('🔥 Auth object type:', typeof auth);
-    console.log('🔥 Auth methods available:', {
-      onAuthStateChanged: typeof auth.onAuthStateChanged,
-      signInWithEmailAndPassword: typeof auth.signInWithEmailAndPassword,
-      currentUser: auth.currentUser
-    });
-    
-    // Use auth methods from our Firebase service
     const unsubscribe = auth.onAuthStateChanged(
-      (firebaseUser) => {
+      async (firebaseUser) => {
         try {
-          console.log('🔥 Auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
-          
           if (firebaseUser) {
-            // Convert Firebase user to our user format
-            const userData = {
-              id: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              emailVerified: firebaseUser.emailVerified,
-              createdAt: firebaseUser.metadata?.creationTime,
-              lastSignInTime: firebaseUser.metadata?.lastSignInTime,
-            };
-            
-            setUser(userData);
-            console.log('🔥 User data set:', userData);
+            // Try live FIMS profile fetch
+            let fimsProfile = await fetchFimsProfile(firebaseUser);
+
+            if (fimsProfile?.__deactivated) {
+              await auth.signOut();
+              setError('Your account has been deactivated. Contact your administrator.');
+              setLoading(false);
+              return;
+            }
+
+            // Fall back to cached profile when offline
+            if (!fimsProfile) {
+              try {
+                const cached = await AsyncStorage.getItem(`${FIMS_CACHE_PREFIX}${firebaseUser.uid}`);
+                if (cached) fimsProfile = JSON.parse(cached);
+              } catch {}
+            } else {
+              // Persist fresh profile for offline use
+              try {
+                await AsyncStorage.setItem(
+                  `${FIMS_CACHE_PREFIX}${firebaseUser.uid}`,
+                  JSON.stringify(fimsProfile)
+                );
+              } catch {}
+            }
+
+            setUser(buildUserData(firebaseUser, fimsProfile));
           } else {
             setUser(null);
-            console.log('🔥 User cleared');
           }
-        } catch (error) {
-          console.error('🔥 Error in auth state change:', error);
-          setError(error.message);
+        } catch (err) {
+          console.error('🔥 Auth state change error:', err);
+          setError(err.message);
         } finally {
           setLoading(false);
         }
       },
-      (error) => {
-        console.error('🔥 Auth state change error:', error);
-        setError(error.message);
+      (err) => {
+        setError(err.message);
         setLoading(false);
       }
     );
 
-    return () => {
-      console.log('🔥 Cleaning up auth listener...');
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
-  const signIn = async (email, password) => {
+  // requiredRoles: string[] | null — if supplied, the user's role must be in the list
+  const signIn = async (email, password, requiredRoles = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -90,16 +124,29 @@ export const AuthProvider = ({ children }) => {
 
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const firebaseUser = userCredential.user;
-      
-      const userData = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        emailVerified: firebaseUser.emailVerified,
-        createdAt: firebaseUser.metadata?.creationTime,
-        lastSignInTime: firebaseUser.metadata?.lastSignInTime,
-      };
-      
+
+      let fimsProfile = await fetchFimsProfile(firebaseUser);
+      if (fimsProfile?.__deactivated) {
+        await auth.signOut();
+        throw new Error('Your account has been deactivated. Contact your administrator.');
+      }
+      if (fimsProfile) {
+        try {
+          await AsyncStorage.setItem(
+            `${FIMS_CACHE_PREFIX}${firebaseUser.uid}`,
+            JSON.stringify(fimsProfile)
+          );
+        } catch {}
+      }
+
+      const userData = buildUserData(firebaseUser, fimsProfile);
+
+      // Role guard — reject before storing user to prevent UI flicker
+      if (requiredRoles?.length && userData.role && !requiredRoles.includes(userData.role)) {
+        await auth.signOut();
+        throw new Error('Access denied. Your account is not authorised for this module. Please use the correct login entry point.');
+      }
+
       setUser(userData);
       return userData;
     } catch (error) {
@@ -158,6 +205,9 @@ export const AuthProvider = ({ children }) => {
   const signOut = async () => {
     try {
       setError(null);
+      if (user?.id) {
+        try { await AsyncStorage.removeItem(`${FIMS_CACHE_PREFIX}${user.id}`); } catch {}
+      }
       await auth.signOut();
       setUser(null);
     } catch (error) {

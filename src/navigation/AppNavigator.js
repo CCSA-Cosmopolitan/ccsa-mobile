@@ -11,6 +11,7 @@ import { useAuth } from '../store/AuthContext';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ApplyScreen from '../screens/ApplyScreen';
 import AddFarmerScreen from '../screens/AddFarmerScreen';
 import AddFarmScreen from '../screens/AddFarmScreen';
 import FarmersListScreen from '../screens/FarmersListScreen';
@@ -22,6 +23,9 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import LoadingScreen from '../screens/LoadingScreen';
+import HomeScreen from '../screens/HomeScreen';
+import CorrectionNavigator from './CorrectionNavigator';
+import SurveyNavigator from './SurveyNavigator';
 
 
 const Stack = createStackNavigator();
@@ -123,6 +127,20 @@ function DrawerNavigator() {
   );
 }
 
+// Temporary placeholder — replaced in later sprints when module navigators are built
+function ComingSoonScreen({ route }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9' }}>
+      <Text style={{ fontSize: 18, fontWeight: '600', color: '#475569' }}>
+        {route.params?.title ?? 'Coming Soon'}
+      </Text>
+      <Text style={{ fontSize: 14, color: '#94a3b8', marginTop: 8 }}>
+        This module is being prepared
+      </Text>
+    </View>
+  );
+}
+
 // Main App Navigator
 export default function AppNavigator() {
   const { user, loading, error } = useAuth();
@@ -155,7 +173,30 @@ export default function AppNavigator() {
       {user ? (
         // Authenticated screens
         <>
-          <Stack.Screen name="MainApp" component={DrawerNavigator} />
+          {/* Module hub — no back button so it acts as the root */}
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{ headerShown: false, gestureEnabled: false }}
+          />
+          {/* Farm Enrollment — existing flow, untouched */}
+          <Stack.Screen
+            name="EnrollmentApp"
+            component={DrawerNavigator}
+            options={{ headerShown: false }}
+          />
+          {/* Data Correction — full module navigator */}
+          <Stack.Screen
+            name="CorrectionApp"
+            component={CorrectionNavigator}
+            options={{ headerShown: false }}
+          />
+          {/* Surveys — full navigator */}
+          <Stack.Screen
+            name="SurveyApp"
+            component={SurveyNavigator}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen 
             name="FarmerDetails" 
             component={FarmerDetailsScreen}
@@ -204,6 +245,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Apply" component={ApplyScreen} />
         </>
       )}
     </Stack.Navigator>

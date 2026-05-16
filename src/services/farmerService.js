@@ -137,7 +137,7 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
 
 export const farmerService = {
   async createFarmer(farmerData) {
-    const url = `${API_BASE_URL}/api/farmers`;
+    const url = `${API_BASE_URL}/api/mobile/farmers`;
     const data = await makeAuthenticatedRequest(url, {
       method: 'POST',
       body: JSON.stringify(farmerData),
@@ -158,7 +158,7 @@ export const farmerService = {
       ...(loadAll && { loadAll: 'true' }),
     });
     
-    const url = `${API_BASE_URL}/api/farmers?${queryParams}`;
+    const url = `${API_BASE_URL}/api/mobile/farmers?${queryParams}`;
     console.log('🔍 Fetching from URL:', url);
     
     try {
@@ -181,13 +181,13 @@ export const farmerService = {
   },
 
   async getFarmerById(id) {
-    const url = `${API_BASE_URL}/api/farmers/${id}`;
+    const url = `${API_BASE_URL}/api/mobile/farmers/${id}`;
     const data = await makeAuthenticatedRequest(url);
     return data;
   },
 
   async getFarmerByNin(nin) {
-    const url = `${API_BASE_URL}/api/farmers/search?query=${nin}&type=nin`;
+    const url = `${API_BASE_URL}/api/mobile/farmers?nin=${encodeURIComponent(nin)}&limit=1`;
     const data = await makeAuthenticatedRequest(url);
     return data.farmers?.[0] || null;
   },
@@ -198,13 +198,13 @@ export const farmerService = {
       ...(type !== 'all' && { type }),
     });
     
-    const url = `${API_BASE_URL}/api/farmers/search?${queryParams}`;
+    const url = `${API_BASE_URL}/api/mobile/farmers?${queryParams}`;
     const data = await makeAuthenticatedRequest(url);
     return data.farmers || [];
   },
 
   async updateFarmer(id, updates) {
-    const url = `${API_BASE_URL}/api/farmers/${id}`;
+    const url = `${API_BASE_URL}/api/mobile/farmers/${id}`;
     const data = await makeAuthenticatedRequest(url, {
       method: 'PUT',
       body: JSON.stringify(updates),
@@ -213,7 +213,7 @@ export const farmerService = {
   },
 
   async deleteFarmer(id) {
-    const url = `${API_BASE_URL}/api/farmers/${id}`;
+    const url = `${API_BASE_URL}/api/mobile/farmers/${id}`;
     await makeAuthenticatedRequest(url, {
       method: 'DELETE',
     });
@@ -221,32 +221,27 @@ export const farmerService = {
   },
 
   async checkUniqueFields(nin, email, phone, bvn) {
-    const queryParams = new URLSearchParams({
-      ...(nin && { nin }),
-      ...(email && { email }),
-      ...(phone && { phone }),
-      ...(bvn && { bvn }),
-    });
-    
-    const url = `${API_BASE_URL}/api/farmers/validate?${queryParams}`;
+    // Check NIN and phone separately since the mobile farmers endpoint returns
+    // matching records (200) rather than throwing on duplicates.
+    const conflicts = [];
     try {
-      await makeAuthenticatedRequest(url);
-      return []; // No conflicts
-    } catch (error) {
-      console.log('Validation error response:', error.message);
-      
-      // Try to parse the error response for conflicts
-      try {
-        // If the error contains structured data about conflicts
-        if (error.message.includes('conflicts')) {
-          return ['Duplicate data found']; // Generic message for now
-        }
-      } catch (parseError) {
-        console.log('Could not parse conflict details:', parseError);
+      if (nin) {
+        const ninData = await makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/mobile/farmers?nin=${encodeURIComponent(nin)}&limit=1`
+        );
+        if (ninData?.farmers?.length > 0) conflicts.push('NIN already registered');
       }
-      
-      // Return generic conflict message
-      return ['Field already exists'];
+      if (phone) {
+        const phoneData = await makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/mobile/farmers?search=${encodeURIComponent(phone)}&limit=1`
+        );
+        if (phoneData?.farmers?.some(f => f.phone === phone)) {
+          conflicts.push('Phone number already registered');
+        }
+      }
+    } catch (error) {
+      console.log('checkUniqueFields error:', error.message);
     }
+    return conflicts;
   },
 };
