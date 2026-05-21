@@ -85,7 +85,7 @@ export default ({ config }) => {
       apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || "https://fims.cosmopolitan.edu.ng"
     },
     updates: {
-      url: "https://u.expo.dev/ccsa-mobile-fims"
+      url: "https://u.expo.dev/1deec560-5e59-4944-b0c4-7c9e028e7943"
     },
     runtimeVersion: {
       policy: "sdkVersion"

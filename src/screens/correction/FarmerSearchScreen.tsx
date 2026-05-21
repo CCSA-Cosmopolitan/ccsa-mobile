@@ -283,14 +283,23 @@ export default function FarmerSearchScreen({ navigation }: { navigation: any }) 
           paddingHorizontal: 20,
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>
+            Data Correction
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('AgentProfile')}
+          style={{ padding: 4 }}
+        >
+          <Ionicons name="person-circle-outline" size={26} color="#fff" />
         </TouchableOpacity>
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>
-          Data Correction
-        </Text>
       </View>
 
       <FilterPanel />

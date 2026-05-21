@@ -79,6 +79,8 @@ export type EditableFields = Pick<
   | 'accountNumber'
   | 'accountName'
   | 'bvn'
+  | 'latitude'
+  | 'longitude'
 >;
 
 // ─── Farm correction types ────────────────────────────────────────────────────
@@ -99,6 +101,7 @@ export interface FarmCorrectionDetail {
   farmingExperience: number | null;
   farmLatitude: number | null;
   farmLongitude: number | null;
+  farmPolygon: any | null;
   soilType: string | null;
   soilPH: number | null;
   soilFertility: string | null;

@@ -6,6 +6,8 @@ import FarmerEditScreen from '../screens/correction/FarmerEditScreen';
 import FarmCorrectionDetailScreen from '../screens/correction/FarmCorrectionDetailScreen';
 import FarmEditScreen from '../screens/correction/FarmEditScreen';
 import RefereeEditScreen from '../screens/correction/RefereeEditScreen';
+import AgentProfileScreen from '../screens/shared/AgentProfileScreen';
+import AgentAttendanceScreen from '../screens/shared/AgentAttendanceScreen';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +25,8 @@ export default function CorrectionNavigator() {
       <Stack.Screen name="FarmCorrectionDetail"  component={FarmCorrectionDetailScreen} />
       <Stack.Screen name="FarmEdit"              component={FarmEditScreen} />
       <Stack.Screen name="RefereeEdit"           component={RefereeEditScreen} />
+      <Stack.Screen name="AgentProfile"          component={AgentProfileScreen} />
+      <Stack.Screen name="AgentAttendance"       component={AgentAttendanceScreen} />
     </Stack.Navigator>
   );
 }

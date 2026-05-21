@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useCorrectionStore } from '../../store/correctionStore';
 import StateSelect from '../../components/common/StateSelect';
 import LGASelect from '../../components/common/LGASelect';
@@ -120,7 +121,32 @@ export default function FarmerEditScreen({
     accountNumber:    f?.accountNumber    ?? '',
     accountName:      f?.accountName      ?? '',
     bvn:              f?.bvn              ?? '',
+    latitude:         f?.latitude         ?? undefined,
+    longitude:        f?.longitude        ?? undefined,
   });
+
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const captureGPS = async () => {
+    setGpsLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Location permission is needed to capture GPS coordinates.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setForm((p) => ({
+        ...p,
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      }));
+    } catch {
+      Alert.alert('Error', 'Failed to get location. Please try again.');
+    } finally {
+      setGpsLoading(false);
+    }
+  };
 
   const set = (key: keyof EditableFields) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -302,6 +328,50 @@ export default function FarmerEditScreen({
             placeholder="Select Polling Unit"
             error={null}
           />
+        </View>
+
+        {/* ── GPS Coordinates ── */}
+        <SectionHeader title="GPS Coordinates" />
+        <View style={{
+          backgroundColor: '#fff', borderRadius: 12,
+          padding: 14, marginBottom: 14,
+          shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
+        }}>
+          <TouchableOpacity
+            onPress={captureGPS}
+            disabled={gpsLoading}
+            activeOpacity={0.85}
+            style={{
+              backgroundColor: PRIMARY, borderRadius: 10,
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              paddingVertical: 12, opacity: gpsLoading ? 0.7 : 1,
+            }}
+          >
+            {gpsLoading
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Ionicons name="location-outline" size={18} color="#fff" style={{ marginRight: 8 }} />}
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14, marginLeft: gpsLoading ? 8 : 0 }}>
+              {gpsLoading ? 'Getting Location…' : 'Capture GPS Coordinates'}
+            </Text>
+          </TouchableOpacity>
+
+          {typeof form.latitude === 'number' && typeof form.longitude === 'number' ? (
+            <View style={{
+              backgroundColor: '#dcfce7', borderRadius: 8,
+              padding: 10, marginTop: 10,
+              flexDirection: 'row', alignItems: 'center',
+            }}>
+              <Ionicons name="checkmark-circle" size={16} color="#16a34a" style={{ marginRight: 6 }} />
+              <Text style={{ color: '#15803d', fontSize: 13, fontWeight: '500' }}>
+                {`Lat: ${(form.latitude as number).toFixed(6)}   Lng: ${(form.longitude as number).toFixed(6)}`}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 8, textAlign: 'center' }}>
+              No GPS coordinates captured
+            </Text>
+          )}
         </View>
 
         {/* ── Financial ── */}

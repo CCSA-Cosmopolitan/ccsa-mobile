@@ -4,11 +4,65 @@ import {
   ActivityIndicator, Alert, StatusBar, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useCorrectionStore } from '../../store/correctionStore';
+import StateSelect from '../../components/common/StateSelect';
+import LGASelect from '../../components/common/LGASelect';
+import WardSelect from '../../components/common/WardSelect';
+import PollingUnitSelect from '../../components/common/PollingUnitSelect';
+import EnhancedCustomSelect from '../../components/common/EnhancedCustomSelect';
+import FarmPolygonMapper from '../../components/common/FarmPolygonMapper';
+import { calculateFarmSizeFromPolygon } from '../../utils/farmCalculations';
 import type { FarmEditableFields } from '../../types/correction';
 
 const PRIMARY = '#013358';
 const BG = '#f1f5f9';
+
+// ─── Option arrays ────────────────────────────────────────────────────────────
+
+const FARM_OWNERSHIP = [
+  { label: 'Select Ownership Type', value: '' },
+  { label: 'Owned', value: 'OWNED' },
+  { label: 'Rented', value: 'RENTED' },
+  { label: 'Leased', value: 'LEASED' },
+  { label: 'Family Land', value: 'FAMILY' },
+  { label: 'Community Land', value: 'COMMUNITY' },
+];
+
+const FARM_SEASONS = [
+  { label: 'Select Farm Season', value: '' },
+  { label: 'Wet Season', value: 'WET' },
+  { label: 'Dry Season', value: 'DRY' },
+  { label: 'Year Round', value: 'YEAR_ROUND' },
+];
+
+const SOIL_TYPES = [
+  { label: 'Select Soil Type', value: '' },
+  { label: 'Clay', value: 'CLAY' },
+  { label: 'Sandy', value: 'SANDY' },
+  { label: 'Loamy', value: 'LOAMY' },
+  { label: 'Silty', value: 'SILTY' },
+  { label: 'Peaty', value: 'PEATY' },
+  { label: 'Rocky', value: 'ROCKY' },
+];
+
+const SOIL_FERTILITY_LEVELS = [
+  { label: 'Select Soil Fertility', value: '' },
+  { label: 'Very High', value: 'VERY_HIGH' },
+  { label: 'High', value: 'HIGH' },
+  { label: 'Medium', value: 'MEDIUM' },
+  { label: 'Low', value: 'LOW' },
+  { label: 'Very Low', value: 'VERY_LOW' },
+];
+
+const YIELD_SEASONS = [
+  { label: 'Select Yield Season', value: '' },
+  { label: 'First Season (March–July)', value: 'FIRST_SEASON' },
+  { label: 'Second Season (Aug–Dec)', value: 'SECOND_SEASON' },
+  { label: 'Year Round', value: 'YEAR_ROUND' },
+  { label: 'Dry Season', value: 'DRY_SEASON' },
+  { label: 'Wet Season', value: 'WET_SEASON' },
+];
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -71,7 +125,7 @@ export default function FarmEditScreen({ route, navigation }: { route: any; navi
   const { selectedFarm, savingFarm, saveFarmError, updateFarm } = useCorrectionStore();
   const f = selectedFarm;
 
-  const [form, setForm] = useState<Partial<FarmEditableFields>>({
+  const [form, setForm] = useState<Partial<FarmEditableFields> & { farmPolygon?: any; farmLatitude?: number | null; farmLongitude?: number | null }>({
     primaryCrop:         f?.primaryCrop ?? '',
     cropVariety:         f?.cropVariety ?? '',
     produceCategory:     f?.produceCategory ?? '',
@@ -93,7 +147,49 @@ export default function FarmEditScreen({ route, navigation }: { route: any; navi
     yieldSeason:         f?.yieldSeason ?? '',
     crop:                f?.crop ?? '',
     quantity:            f?.quantity ?? undefined,
+    farmLatitude:        (f as any)?.farmLatitude ?? null,
+    farmLongitude:       (f as any)?.farmLongitude ?? null,
+    farmPolygon:         (f as any)?.farmPolygon ?? [],
   });
+
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const captureGPS = async () => {
+    setGpsLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Location permission is needed to capture GPS coordinates.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setForm((p) => ({
+        ...p,
+        farmLatitude: loc.coords.latitude,
+        farmLongitude: loc.coords.longitude,
+      }));
+    } catch {
+      Alert.alert('Error', 'Failed to get location. Please try again.');
+    } finally {
+      setGpsLoading(false);
+    }
+  };
+
+  const handlePolygonUpdate = (pts: Array<{ latitude: number; longitude: number }>) => {
+    const newPolygon = pts;
+    let newSize = form.farmSize;
+    if (pts.length >= 3) {
+      try {
+        const calculated = calculateFarmSizeFromPolygon(pts);
+        if (typeof calculated === 'number' && !isNaN(calculated)) {
+          newSize = calculated;
+        }
+      } catch {
+        // keep existing size if calculation fails
+      }
+    }
+    setForm((p) => ({ ...p, farmPolygon: newPolygon, farmSize: newSize }));
+  };
 
   const str = (v: string | number | undefined) => (v !== undefined && v !== null ? String(v) : '');
   const num = (v: string): number | undefined => {
@@ -114,11 +210,19 @@ export default function FarmEditScreen({ route, navigation }: { route: any; navi
 
   const getChangedFields = (): Partial<FarmEditableFields> => {
     const diff: Partial<FarmEditableFields> = {};
-    (Object.keys(form) as (keyof FarmEditableFields)[]).forEach((key) => {
-      const original = f ? String((f as any)[key] ?? '') : '';
-      const current = String((form as any)[key] ?? '');
-      if (original !== current) {
-        (diff as any)[key] = (form as any)[key];
+    (Object.keys(form) as (keyof typeof form)[]).forEach((key) => {
+      const original = f ? (f as any)[key] : undefined;
+      const current = (form as any)[key];
+      if (key === 'farmPolygon') {
+        if (JSON.stringify(original ?? []) !== JSON.stringify(current ?? [])) {
+          (diff as any)[key] = current;
+        }
+      } else {
+        const originalStr = String(original ?? '');
+        const currentStr = String(current ?? '');
+        if (originalStr !== currentStr) {
+          (diff as any)[key] = current;
+        }
       }
     });
     return diff;
@@ -210,11 +314,109 @@ export default function FarmEditScreen({ route, navigation }: { route: any; navi
 
         <SectionHeader title="Farm Location" />
         <CardSection>
-          <EditField label="State"            value={str(form.farmState)}           onChange={setStr('farmState')} />
-          <EditField label="Local Government" value={str(form.farmLocalGovernment)} onChange={setStr('farmLocalGovernment')} />
-          <EditField label="Ward"             value={str(form.farmWard)}            onChange={setStr('farmWard')} />
-          <EditField label="Polling Unit"     value={str(form.farmPollingUnit)}     onChange={setStr('farmPollingUnit')} />
-          <EditField label="Landforms"        value={str(form.landforms)}           onChange={setStr('landforms')} />
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>State</Text>
+            <StateSelect
+              selectedValue={form.farmState ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, farmState: v, farmLocalGovernment: '', farmWard: '', farmPollingUnit: '' }))}
+              placeholder="Select State"
+              error={null}
+            />
+          </View>
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>LGA</Text>
+            <LGASelect
+              selectedState={form.farmState ?? ''}
+              selectedValue={form.farmLocalGovernment ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, farmLocalGovernment: v, farmWard: '', farmPollingUnit: '' }))}
+              placeholder="Select LGA"
+              error={null}
+            />
+          </View>
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Ward</Text>
+            <WardSelect
+              selectedState={form.farmState ?? ''}
+              selectedLGA={form.farmLocalGovernment ?? ''}
+              selectedValue={form.farmWard ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, farmWard: v, farmPollingUnit: '' }))}
+              placeholder="Select Ward"
+              error={null}
+            />
+          </View>
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Polling Unit</Text>
+            <PollingUnitSelect
+              selectedState={form.farmState ?? ''}
+              selectedLGA={form.farmLocalGovernment ?? ''}
+              selectedWard={form.farmWard ?? ''}
+              selectedValue={form.farmPollingUnit ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, farmPollingUnit: v }))}
+              placeholder="Select Polling Unit"
+              error={null}
+            />
+          </View>
+          <EditField label="Landforms" value={str(form.landforms)} onChange={setStr('landforms')} />
+        </CardSection>
+
+        <SectionHeader title="GPS Center Point" />
+        <CardSection>
+          <TouchableOpacity
+            onPress={captureGPS}
+            disabled={gpsLoading}
+            activeOpacity={0.85}
+            style={{
+              backgroundColor: PRIMARY, borderRadius: 10,
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              paddingVertical: 12, marginBottom: 10,
+              opacity: gpsLoading ? 0.7 : 1,
+            }}
+          >
+            {gpsLoading
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Ionicons name="location-outline" size={18} color="#fff" style={{ marginRight: 8 }} />}
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14, marginLeft: gpsLoading ? 8 : 0 }}>
+              {gpsLoading ? 'Getting Location…' : 'Capture GPS Center Point'}
+            </Text>
+          </TouchableOpacity>
+          {typeof form.farmLatitude === 'number' && typeof form.farmLongitude === 'number' ? (
+            <View style={{
+              backgroundColor: '#dcfce7', borderRadius: 8, padding: 10,
+              flexDirection: 'row', alignItems: 'center',
+            }}>
+              <Ionicons name="checkmark-circle" size={16} color="#16a34a" style={{ marginRight: 6 }} />
+              <Text style={{ color: '#15803d', fontSize: 13, fontWeight: '500' }}>
+                {`Lat: ${(form.farmLatitude as number).toFixed(6)}   Lng: ${(form.farmLongitude as number).toFixed(6)}`}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center' }}>
+              No GPS center point captured
+            </Text>
+          )}
+        </CardSection>
+
+        <SectionHeader title="Farm Boundary" />
+        <CardSection>
+          <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
+            Map the boundary of this farm by placing points on the map. Farm size will be auto-calculated.
+          </Text>
+          <FarmPolygonMapper
+            onPolygonUpdate={handlePolygonUpdate}
+            initialPolygon={form.farmPolygon ?? []}
+          />
+          {Array.isArray(form.farmPolygon) && form.farmPolygon.length >= 3 && (
+            <View style={{
+              backgroundColor: '#eff6ff', borderRadius: 8, padding: 10, marginTop: 8,
+              flexDirection: 'row', alignItems: 'center',
+            }}>
+              <Ionicons name="map-outline" size={14} color="#2563eb" style={{ marginRight: 6 }} />
+              <Text style={{ color: '#1d4ed8', fontSize: 12 }}>
+                {form.farmPolygon.length} boundary points captured
+                {form.farmSize ? `  •  ~${(form.farmSize as number).toFixed(2)} ha` : ''}
+              </Text>
+            </View>
+          )}
         </CardSection>
 
         <SectionHeader title="Farm Details" />
@@ -222,22 +424,72 @@ export default function FarmEditScreen({ route, navigation }: { route: any; navi
           <EditField label="Farm Size (ha)"      value={str(form.farmSize)}           onChange={setNum('farmSize')}           keyboardType="decimal-pad" hint="Hectares" />
           <EditField label="Farm Area"           value={str(form.farmArea)}           onChange={setNum('farmArea')}           keyboardType="decimal-pad" />
           <EditField label="Farm Elevation (m)"  value={str(form.farmElevation)}      onChange={setNum('farmElevation')}      keyboardType="decimal-pad" />
-          <EditField label="Farm Ownership"      value={str(form.farmOwnership)}      onChange={setStr('farmOwnership')} />
-          <EditField label="Farming Season"      value={str(form.farmingSeason)}      onChange={setStr('farmingSeason')} />
-          <EditField label="Farming Experience"  value={str(form.farmingExperience)}  onChange={setInt('farmingExperience')}  keyboardType="number-pad" hint="Years" />
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Farm Ownership</Text>
+            <EnhancedCustomSelect
+              options={FARM_OWNERSHIP}
+              selectedValue={form.farmOwnership ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, farmOwnership: v }))}
+              placeholder="Select Ownership Type"
+              icon="home-outline"
+              title="Farm Ownership"
+            />
+          </View>
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Farming Season</Text>
+            <EnhancedCustomSelect
+              options={FARM_SEASONS}
+              selectedValue={form.farmingSeason ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, farmingSeason: v }))}
+              placeholder="Select Farm Season"
+              icon="sunny-outline"
+              title="Farming Season"
+            />
+          </View>
+          <EditField label="Farming Experience" value={str(form.farmingExperience)} onChange={setInt('farmingExperience')} keyboardType="number-pad" hint="Years" />
         </CardSection>
 
         <SectionHeader title="Soil Information" />
         <CardSection>
-          <EditField label="Soil Type"     value={str(form.soilType)}     onChange={setStr('soilType')} />
-          <EditField label="Soil Fertility" value={str(form.soilFertility)} onChange={setStr('soilFertility')} />
-          <EditField label="Soil pH"        value={str(form.soilPH)}       onChange={setNum('soilPH')} keyboardType="decimal-pad" hint="0 – 14" />
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Soil Type</Text>
+            <EnhancedCustomSelect
+              options={SOIL_TYPES}
+              selectedValue={form.soilType ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, soilType: v }))}
+              placeholder="Select Soil Type"
+              icon="layers-outline"
+              title="Soil Type"
+            />
+          </View>
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Soil Fertility</Text>
+            <EnhancedCustomSelect
+              options={SOIL_FERTILITY_LEVELS}
+              selectedValue={form.soilFertility ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, soilFertility: v }))}
+              placeholder="Select Soil Fertility"
+              icon="leaf-outline"
+              title="Soil Fertility"
+            />
+          </View>
+          <EditField label="Soil pH" value={str(form.soilPH)} onChange={setNum('soilPH')} keyboardType="decimal-pad" hint="0 – 14" />
         </CardSection>
 
         <SectionHeader title="Yield Information" />
         <CardSection>
           <EditField label="Year"          value={str(form.year)}        onChange={setNum('year')}     keyboardType="number-pad" />
-          <EditField label="Yield Season"  value={str(form.yieldSeason)} onChange={setStr('yieldSeason')} />
+          <View style={{ marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500', marginBottom: 5 }}>Yield Season</Text>
+            <EnhancedCustomSelect
+              options={YIELD_SEASONS}
+              selectedValue={form.yieldSeason ?? ''}
+              onValueChange={(v: string) => setForm((p) => ({ ...p, yieldSeason: v }))}
+              placeholder="Select Yield Season"
+              icon="calendar-outline"
+              title="Yield Season"
+            />
+          </View>
           <EditField label="Crop Name"     value={str(form.crop)}        onChange={setStr('crop')} />
           <EditField label="Quantity (kg)" value={str(form.quantity)}    onChange={setNum('quantity')} keyboardType="decimal-pad" />
         </CardSection>

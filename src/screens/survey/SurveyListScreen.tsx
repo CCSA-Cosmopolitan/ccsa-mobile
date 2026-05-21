@@ -28,12 +28,20 @@ export default function SurveyListScreen({ navigation }: { navigation: any }) {
       <StatusBar barStyle="light-content" backgroundColor="#013358" />
 
       {/* Navy Header */}
-      <View style={{ backgroundColor: '#013358', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20 }}>
-        <Text style={{ color: '#93c5fd', fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
-          CCSA
-        </Text>
-        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', marginTop: 2 }}>Surveys</Text>
-        <Text style={{ color: '#93c5fd', fontSize: 13, marginTop: 2 }}>Select a survey to begin</Text>
+      <View style={{ backgroundColor: '#013358', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <View>
+          <Text style={{ color: '#93c5fd', fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
+            CCSA
+          </Text>
+          <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', marginTop: 2 }}>Surveys</Text>
+          <Text style={{ color: '#93c5fd', fontSize: 13, marginTop: 2 }}>Select a survey to begin</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('AgentProfile')}
+          style={{ padding: 4, paddingBottom: 2 }}
+        >
+          <Ionicons name="person-circle-outline" size={28} color="rgba(255,255,255,0.85)" />
+        </TouchableOpacity>
       </View>
 
       {loadingSurveys && surveys.length === 0 && (

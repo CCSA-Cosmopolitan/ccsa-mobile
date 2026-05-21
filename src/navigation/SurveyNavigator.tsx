@@ -5,6 +5,8 @@ import FarmerSelectScreen from '../screens/survey/FarmerSelectScreen';
 import QuestionnaireScreen from '../screens/survey/QuestionnaireScreen';
 import SurveyReviewScreen from '../screens/survey/SurveyReviewScreen';
 import SurveyCompleteScreen from '../screens/survey/SurveyCompleteScreen';
+import AgentProfileScreen from '../screens/shared/AgentProfileScreen';
+import AgentAttendanceScreen from '../screens/shared/AgentAttendanceScreen';
 
 const Stack = createStackNavigator();
 
@@ -42,6 +44,16 @@ export default function SurveyNavigator() {
       <Stack.Screen
         name="SurveyComplete"
         component={SurveyCompleteScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AgentProfile"
+        component={AgentProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AgentAttendance"
+        component={AgentAttendanceScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
