@@ -23,6 +23,7 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import LoadingScreen from '../screens/LoadingScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CorrectionNavigator from './CorrectionNavigator';
 import SurveyNavigator from './SurveyNavigator';
@@ -235,6 +236,15 @@ export default function AppNavigator() {
             options={{ 
               headerShown: true,
               title: 'Attendance Tracking',
+              headerBackTitle: 'Back'
+            }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfileScreen}
+            options={{ 
+              headerShown: true,
+              title: 'Edit Profile',
               headerBackTitle: 'Back'
             }}
           />

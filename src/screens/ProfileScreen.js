@@ -41,7 +41,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Profile editing will be implemented soon.');
+    navigation.navigate('EditProfile');
   };
 
   const handleChangePassword = () => {

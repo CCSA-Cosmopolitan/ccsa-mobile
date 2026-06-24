@@ -225,6 +225,23 @@ export default function FarmInfoStep({ control, errors, setValue, watch, showTit
       setCoordinates(coords);
       setValue('farmInfo.coordinates', coords);
       
+      // Fetch Soil pH using GIS data (ISRIC SoilGrids)
+      try {
+        const phRes = await fetch(`https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${coords.longitude}&lat=${coords.latitude}&property=phh2o&depth=0-5cm&value=mean`);
+        if (phRes.ok) {
+          const phJson = await phRes.json();
+          const phValue = phJson?.properties?.layers?.[0]?.depths?.[0]?.values?.mean;
+          if (phValue) {
+            const calculatedPH = (phValue / 10).toFixed(1);
+            setValue('soilPH', String(calculatedPH));
+            Alert.alert('Location Captured', `Coordinates saved!\nLat: ${coords.latitude.toFixed(6)}, Lng: ${coords.longitude.toFixed(6)}\n\nSoil pH estimated from GIS: ${calculatedPH}`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch soil PH', err);
+      }
+      
       Alert.alert('Location Captured', `Lat: ${coords.latitude.toFixed(6)}, Lng: ${coords.longitude.toFixed(6)}`);
     } catch (error) {
       Alert.alert('Error', 'Failed to get current location');
