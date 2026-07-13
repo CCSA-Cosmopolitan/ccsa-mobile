@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { registrationSchema } from '../utils/validation';
 import { useAuth } from '../store/AuthContext';
 import LoadingScreen from './LoadingScreen';
+import brand from '../theme/brand';
 
 export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
@@ -79,7 +80,7 @@ export default function RegisterScreen({ navigation }) {
             </TouchableOpacity>
             
             <View style={styles.logoContainer}>
-              <Ionicons name="leaf" size={60} color="#10b981" />
+              <Ionicons name="leaf" size={60} color={brand.colors.primary} />
             </View>
             
             <Text style={styles.title}>Create Account</Text>
@@ -289,7 +290,7 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: brand.colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: brand.colors.primaryExtraLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -321,12 +322,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: brand.colors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: brand.colors.darkGray,
     textAlign: 'center',
   },
   form: {
@@ -339,16 +340,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: brand.colors.darkGray,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: brand.colors.primaryLight,
     borderRadius: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: brand.colors.offWhite,
   },
   inputIcon: {
     marginLeft: 16,
@@ -358,21 +359,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#1f2937',
+    color: brand.colors.text,
   },
   inputError: {
-    borderColor: '#ef4444',
+    borderColor: brand.colors.error,
   },
   eyeButton: {
     padding: 16,
   },
   errorText: {
     fontSize: 14,
-    color: '#ef4444',
+    color: brand.colors.error,
     marginTop: 4,
   },
   registerButton: {
-    backgroundColor: '#013358',
+    backgroundColor: brand.colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   registerButtonText: {
-    color: '#ffffff',
+    color: brand.colors.white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -391,11 +392,11 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: brand.colors.darkGray,
   },
   loginLink: {
     fontSize: 16,
-    color: '#013358',
+    color: brand.colors.primary,
     fontWeight: '600',
   },
 });

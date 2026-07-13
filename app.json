@@ -23,7 +23,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ng.edu.cosmopolitan.fims",
+      "bundleIdentifier": "ng.edu.cosmopolitan.ccsa",
       "buildNumber": "1",
       "icon": "./assets/icon.png",
       "infoPlist": {
@@ -35,7 +35,8 @@
       }
     },
     "android": {
-      "package": "ng.edu.cosmopolitan.fims",
+      "package": "ng.edu.cosmopolitan.ccsa",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "icon": "./assets/icon.png",
       "adaptiveIcon": {

@@ -18,7 +18,7 @@ export default ({ config }) => {
     assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "ng.edu.cosmopolitan.fims",
+      bundleIdentifier: "ng.edu.cosmopolitan.ccsa",
       buildNumber: "1",
       icon: "./assets/icon.png",
       infoPlist: {
@@ -30,7 +30,7 @@ export default ({ config }) => {
       }
     },
     android: {
-      package: "ng.edu.cosmopolitan.fims",
+      package: "ng.edu.cosmopolitan.ccsa",
       versionCode: 1,
       icon: "./assets/icon.png",
       adaptiveIcon: {

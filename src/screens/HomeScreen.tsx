@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../store/AuthContext';
+import brand from '../theme/brand';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,8 +34,8 @@ const MODULES: Module[] = [
     icon: 'leaf',
     navTarget: 'EnrollmentApp',
     roles: ['agent', 'admin'],
-    iconColor: '#013358',
-    iconBg: '#dbeafe',
+    iconColor: brand.colors.primary,
+    iconBg: brand.colors.primaryExtraLight,
   },
   {
     id: 'correction',
@@ -53,8 +54,18 @@ const MODULES: Module[] = [
     icon: 'clipboard-outline',
     navTarget: 'SurveyApp',
     roles: ['survey_agent', 'admin'],
-    iconColor: '#065f46',
+    iconColor: brand.colors.success,
     iconBg: '#d1fae5',
+  },
+  {
+    id: 'agribusiness',
+    title: 'Agri-Business',
+    description: 'Capture stakeholders, KYB readiness and partnership opportunities.',
+    icon: 'business-outline',
+    navTarget: 'AgriBusinessApp',
+    roles: ['agri_business_agent', 'manager', 'admin'],
+    iconColor: brand.colors.primary,
+    iconBg: brand.colors.primaryLight,
   },
 ];
 
@@ -62,6 +73,8 @@ const ROLE_LABELS: Record<string, string> = {
   agent: 'Enrollment Agent',
   data_correction_agent: 'Correction Agent',
   survey_agent: 'Survey Agent',
+  agri_business_agent: 'Agri-Business Agent',
+  manager: 'Manager',
   admin: 'Administrator',
 };
 
@@ -99,13 +112,13 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f1f5f9' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#013358" />
+    <View style={{ flex: 1, backgroundColor: brand.colors.offWhite }}>
+      <StatusBar barStyle="light-content" backgroundColor={brand.colors.primary} />
 
       {/* ── Header ── */}
       <View
         style={{
-          backgroundColor: '#013358',
+          backgroundColor: brand.colors.primary,
           paddingTop: 52,
           paddingBottom: 32,
           paddingHorizontal: 24,
@@ -117,7 +130,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               Welcome back
             </Text>
             <Text
-              style={{ color: '#ffffff', fontSize: 22, fontWeight: '700', letterSpacing: -0.3 }}
+              style={{ color: brand.colors.white, fontSize: 22, fontWeight: '700', letterSpacing: 0 }}
               numberOfLines={1}
             >
               {displayName}
@@ -133,7 +146,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
                 paddingVertical: 4,
               }}
             >
-              <Text style={{ color: '#bfdbfe', fontSize: 12, fontWeight: '600' }}>
+              <Text style={{ color: brand.colors.primaryLight, fontSize: 12, fontWeight: '600' }}>
                 {ROLE_LABELS[role] ?? role}
               </Text>
             </View>
@@ -179,8 +192,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             onPress={() => navigation.navigate(mod.navTarget)}
             activeOpacity={0.8}
             style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 16,
+              backgroundColor: brand.colors.white,
+              borderRadius: 14,
               padding: 20,
               marginBottom: 12,
               flexDirection: 'row',
@@ -209,10 +222,10 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
 
             {/* Text */}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 3 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: brand.colors.text, marginBottom: 3 }}>
                 {mod.title}
               </Text>
-              <Text style={{ fontSize: 13, color: '#64748b', lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: brand.colors.darkGray, lineHeight: 18 }}>
                 {mod.description}
               </Text>
             </View>

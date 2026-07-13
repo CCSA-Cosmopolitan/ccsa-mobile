@@ -132,4 +132,6 @@ nul
 *.json
 !package*.json
 !tsconfig.json
+!eas.json
+!app.json
 !backend/prisma/schema.prisma

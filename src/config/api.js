@@ -38,6 +38,9 @@ const API_CONFIG = {
 
     // Agent application (public — no auth required)
     AGENT_APPLY: '/api/agents/apply',
+    AGRIBUSINESS_APPLY: '/api/public/agribusiness/apply',
+    AGRIBUSINESS_MOBILE: '/api/mobile/agribusiness',
+    EXTRACT_KYB: '/api/mobile/ai/extract-kyb',
 
     // NIN and SMS endpoints
     NIN_LOOKUP: '/api/nin/lookup',

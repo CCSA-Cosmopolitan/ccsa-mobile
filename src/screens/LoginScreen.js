@@ -5,21 +5,29 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '../utils/validation';
 import { useAuth } from '../store/AuthContext';
 import LoadingScreen from './LoadingScreen';
+import brand from '../theme/brand';
 
 // Per-module header config
 const MODULE_CONFIG = {
+  agribusiness: {
+    icon: 'business-outline',
+    iconBg: '#DCEAF3',
+    iconColor: '#013358',
+    title: 'Agri-Business',
+    subtitle: 'Sign in to capture partner leads and KYB readiness',
+  },
   enrollment: {
     icon: 'leaf',
     iconBg: '#dbeafe',
@@ -45,6 +53,7 @@ const MODULE_CONFIG = {
 
 // Roles allowed per module — admin can log in anywhere
 const MODULE_ROLES = {
+  agribusiness: ['agri_business_agent', 'manager', 'admin'],
   enrollment: ['agent', 'admin'],
   correction: ['data_correction_agent', 'admin'],
   survey:     ['survey_agent', 'admin'],
@@ -52,8 +61,8 @@ const MODULE_ROLES = {
 
 const DEFAULT_CONFIG = {
   icon: 'leaf',
-  iconBg: '#f0fdf4',
-  iconColor: '#10b981',
+  iconBg: '#F3F8FC',
+  iconColor: '#013358',
   title: 'Welcome Back',
   subtitle: 'Sign in to access your FIMS dashboard',
 };
@@ -252,7 +261,7 @@ export default function LoginScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: brand.colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -272,7 +281,7 @@ const styles = StyleSheet.create({
     top: 32,
     left: 0,
     padding: 8,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: brand.colors.primaryExtraLight,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#d1d5db',
@@ -289,12 +298,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: brand.colors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: brand.colors.darkGray,
     textAlign: 'center',
   },
   form: {
@@ -306,16 +315,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: brand.colors.darkGray,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: brand.colors.primaryLight,
     borderRadius: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: brand.colors.offWhite,
   },
   inputIcon: {
     marginLeft: 16,
@@ -325,21 +334,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#1f2937',
+    color: brand.colors.text,
   },
   inputError: {
-    borderColor: '#ef4444',
+    borderColor: brand.colors.error,
   },
   eyeButton: {
     padding: 16,
   },
   errorText: {
     fontSize: 14,
-    color: '#ef4444',
+    color: brand.colors.error,
     marginTop: 4,
   },
   loginButton: {
-    backgroundColor: '#013358',
+    backgroundColor: brand.colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -347,7 +356,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loginButtonText: {
-    color: '#ffffff',
+    color: brand.colors.white,
     fontSize: 18,
     fontWeight: '600',
   },

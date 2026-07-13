@@ -12,6 +12,8 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ApplyScreen from '../screens/ApplyScreen';
+import AgriBusinessScreen from '../screens/AgriBusinessScreen';
+import AgriBusinessLeadFormScreen from '../screens/AgriBusinessLeadFormScreen';
 import AddFarmerScreen from '../screens/AddFarmerScreen';
 import AddFarmScreen from '../screens/AddFarmScreen';
 import FarmersListScreen from '../screens/FarmersListScreen';
@@ -196,6 +198,16 @@ export default function AppNavigator() {
           <Stack.Screen
             name="SurveyApp"
             component={SurveyNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AgriBusinessApp"
+            component={AgriBusinessScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AgriBusinessLeadForm"
+            component={AgriBusinessLeadFormScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen 

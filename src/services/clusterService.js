@@ -70,29 +70,11 @@ class ClusterService {
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.limit) queryParams.append('limit', params.limit.toString());
 
-      const endpoint = `/api/clusters${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const fullUrl = `${this.baseURL}${endpoint}`;
+       const endpoint = `/api/clusters${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       
-      console.log('🌐 Fetching clusters from:', fullUrl);
+      console.log('🌐 Fetching clusters from:', endpoint);
       
-      // Make unauthenticated request for GET - clusters are public
-      const response = await fetch(fullUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
-
-      console.log('📡 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ API Error:', errorData);
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await this.makeAuthenticatedRequest(endpoint);
       console.log('✅ Clusters received:', data.clusters?.length || 0);
       
       return {

@@ -10,8 +10,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import brand from '../theme/brand';
 
 const MODULES = [
+  {
+    key: 'agribusiness',
+    icon: 'business-outline',
+    title: 'Agri-Business',
+    desc: 'Partner onboarding and stakeholder opportunities',
+  },
   {
     key: 'enrollment',
     icon: 'leaf-outline',
@@ -37,7 +44,7 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={brand.colors.white} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -68,7 +75,7 @@ export default function WelcomeScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <View style={styles.moduleIconWrap}>
-              <Ionicons name={mod.icon} size={22} color="#013358" />
+              <Ionicons name={mod.icon} size={22} color={brand.colors.primary} />
             </View>
             <View style={styles.moduleBody}>
               <Text style={styles.moduleTitle}>{mod.title}</Text>
@@ -95,7 +102,7 @@ export default function WelcomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: brand.colors.white,
   },
   scroll: {
     flexGrow: 1,
@@ -123,27 +130,27 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#013358',
+    color: brand.colors.primary,
     letterSpacing: -0.5,
     marginBottom: 4,
     textAlign: 'center',
   },
   brandSub: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: brand.colors.gray,
     textAlign: 'center',
   },
 
   divider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: brand.colors.lightGray,
     marginBottom: 24,
     width: '100%',
   },
 
   sectionLabel: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: brand.colors.gray,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -159,16 +166,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     width: '100%',
     borderWidth: 1.5,
-    borderColor: '#c7d2e0',
-    borderRadius: 10,
+    borderColor: brand.colors.primaryLight,
+    borderRadius: 12,
     marginBottom: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: brand.colors.white,
   },
   moduleIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#f0f6ff',
+    backgroundColor: brand.colors.primaryExtraLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -179,12 +186,12 @@ const styles = StyleSheet.create({
   moduleTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0f172a',
+    color: brand.colors.text,
     marginBottom: 2,
   },
   moduleDesc: {
     fontSize: 12,
-    color: '#64748b',
+    color: brand.colors.darkGray,
     lineHeight: 17,
   },
 
@@ -195,14 +202,14 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: brand.colors.primaryLight,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: brand.colors.white,
   },
   applyButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748b',
+    color: brand.colors.darkGray,
   },
 });
 

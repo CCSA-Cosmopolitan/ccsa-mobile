@@ -138,9 +138,53 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
 export const farmerService = {
   async createFarmer(farmerData) {
     const url = `${API_BASE_URL}/api/mobile/farmers`;
+
+    // Transform nested farmerData to flat structure expected by backend
+    const payload = {
+      nin: farmerData.nin,
+      firstName: farmerData.personalInfo?.firstName,
+      middleName: farmerData.personalInfo?.middleName,
+      lastName: farmerData.personalInfo?.lastName,
+      dateOfBirth: farmerData.personalInfo?.dateOfBirth,
+      gender: farmerData.personalInfo?.gender,
+      maritalStatus: farmerData.personalInfo?.maritalStatus,
+      employmentStatus: farmerData.personalInfo?.employmentStatus,
+      photoUrl: farmerData.personalInfo?.photoUrl,
+
+      state: farmerData.contactInfo?.state,
+      lga: farmerData.contactInfo?.localGovernment,
+      ward: farmerData.contactInfo?.ward,
+      pollingUnit: farmerData.contactInfo?.pollingUnit,
+      clusterId: farmerData.contactInfo?.cluster,
+      phone: farmerData.contactInfo?.phoneNumber,
+      whatsAppNumber: farmerData.contactInfo?.whatsAppNumber,
+      email: farmerData.contactInfo?.email,
+      address: farmerData.contactInfo?.address,
+      latitude: farmerData.contactInfo?.coordinates?.latitude,
+      longitude: farmerData.contactInfo?.coordinates?.longitude,
+
+      bvn: farmerData.bankInfo?.bvn,
+      bankName: farmerData.bankInfo?.bankName,
+      accountNumber: farmerData.bankInfo?.accountNumber,
+      accountName: farmerData.bankInfo?.accountName,
+
+      referees: farmerData.referees?.map(r => {
+        const nameParts = (r.fullName || '').trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
+        
+        return {
+          firstName,
+          lastName,
+          phone: r.phoneNumber,
+          relationship: r.relation
+        };
+      }).filter(r => r.firstName && r.phone)
+    };
+
     const data = await makeAuthenticatedRequest(url, {
       method: 'POST',
-      body: JSON.stringify(farmerData),
+      body: JSON.stringify(payload),
     });
     return data;
   },
