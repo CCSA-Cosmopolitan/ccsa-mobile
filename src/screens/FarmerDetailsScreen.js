@@ -126,6 +126,26 @@ const FarmerDetailsScreen = ({ route, navigation }) => {
             <Text style={styles.buttonText}>View Certificate</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Zora AI Quick Action */}
+        <TouchableOpacity
+          style={styles.zoraBar}
+          onPress={() =>
+            navigation.navigate('ZoraApp', {
+              farmerName: `${currentFarmer.firstName} ${currentFarmer.lastName}`,
+              crop: currentFarmer.farmInfo?.primaryCrop || 'Maize',
+            })
+          }
+        >
+          <View style={styles.zoraIconWrapper}>
+            <Ionicons name="sparkles" size={16} color="#ffffff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.zoraBarTitle}>Consult Zora AI on this Farmer&apos;s Field</Text>
+            <Text style={styles.zoraBarSubtitle}>Voice & leaf disease diagnosis in 5 languages</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#059669" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
@@ -386,6 +406,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  zoraBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 10,
+  },
+  zoraIconWrapper: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  zoraBarTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065f46',
+  },
+  zoraBarSubtitle: {
+    fontSize: 11,
+    color: '#047857',
+    marginTop: 1,
   },
   content: {
     padding: 20,

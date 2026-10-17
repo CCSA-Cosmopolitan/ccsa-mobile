@@ -67,6 +67,16 @@ const MODULES: Module[] = [
     iconColor: brand.colors.primary,
     iconBg: brand.colors.primaryLight,
   },
+  {
+    id: 'zora',
+    title: 'Zora AI Agronomist',
+    description: 'Instant voice & camera diagnosis for crop pests, plant disease, and savanna climate spray advice.',
+    icon: 'sparkles',
+    navTarget: 'ZoraApp',
+    roles: ['agent', 'data_correction_agent', 'survey_agent', 'agri_business_agent', 'manager', 'admin'],
+    iconColor: '#059669',
+    iconBg: '#d1fae5',
+  },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

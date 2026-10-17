@@ -27,6 +27,7 @@ import AttendanceScreen from '../screens/AttendanceScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
+import ZoraScreen from '../screens/ZoraScreen';
 import CorrectionNavigator from './CorrectionNavigator';
 import SurveyNavigator from './SurveyNavigator';
 
@@ -120,6 +121,14 @@ function DrawerNavigator() {
         }}
       />
       <Drawer.Screen 
+        name="ZoraAI" 
+        component={ZoraScreen} 
+        options={{
+          title: 'Zora AI Agronomist',
+          drawerIcon: ({ color }) => <Ionicons name="sparkles" size={22} color="#059669" />
+        }}
+      />
+      <Drawer.Screen 
         name="Attendance" 
         component={AttendanceScreen} 
         options={{
@@ -198,6 +207,11 @@ export default function AppNavigator() {
           <Stack.Screen
             name="SurveyApp"
             component={SurveyNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ZoraApp"
+            component={ZoraScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
