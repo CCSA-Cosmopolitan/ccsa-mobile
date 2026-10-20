@@ -191,7 +191,7 @@ export default function FarmEditScreen({ route, navigation }: { route: any; navi
     setForm((p) => ({ ...p, farmPolygon: newPolygon, farmSize: newSize }));
   };
 
-  const str = (v: string | number | undefined) => (v !== undefined && v !== null ? String(v) : '');
+  const str = (v: string | number | null | undefined) => (v !== undefined && v !== null ? String(v) : '');
   const num = (v: string): number | undefined => {
     const n = parseFloat(v);
     return isNaN(n) ? undefined : n;

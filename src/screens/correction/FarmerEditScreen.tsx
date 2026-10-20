@@ -121,8 +121,8 @@ export default function FarmerEditScreen({
     accountNumber:    f?.accountNumber    ?? '',
     accountName:      f?.accountName      ?? '',
     bvn:              f?.bvn              ?? '',
-    latitude:         f?.latitude         ?? undefined,
-    longitude:        f?.longitude        ?? undefined,
+    latitude:         f?.latitude         ?? null,
+    longitude:        f?.longitude        ?? null,
   });
 
   const [gpsLoading, setGpsLoading] = useState(false);

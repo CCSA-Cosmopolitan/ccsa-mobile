@@ -391,25 +391,6 @@ export default function AddFarmerScreen({ navigation }) {
         throw new Error('Please enter a valid 11-digit NIN');
       }
 
-      // Test network connectivity first (without auth)
-      console.log('Testing network connectivity...');
-      try {
-        // Simple network test - try to reach the API health endpoint
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        await fetch('http://172.20.10.4:3000/health', { 
-          method: 'GET',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        console.log('Network connectivity test passed');
-      } catch (networkError) {
-        console.error('Network test failed:', networkError);
-        // Still continue with the main lookup in case the test endpoint doesn't work
-      }
-
       // Check if farmer already exists with this NIN
       console.log('Checking if farmer already exists with NIN:', nin);
       try {

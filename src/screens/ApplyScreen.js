@@ -101,11 +101,12 @@ export default function ApplyScreen({ navigation }) {
   const [submitting, setSubmitting] = useState(false);
 
   // Personal
-  const [firstName,  setFirstName]  = useState('');
-  const [lastName,   setLastName]   = useState('');
-  const [email,      setEmail]      = useState('');
-  const [phone,      setPhone]      = useState('');
-  const [nin,        setNin]        = useState('');
+  const [firstName,      setFirstName]      = useState('');
+  const [lastName,       setLastName]       = useState('');
+  const [email,          setEmail]          = useState('');
+  const [phone,          setPhone]          = useState('');
+  const [nin,            setNin]            = useState('');
+  const [enrollmentCode, setEnrollmentCode] = useState('');
 
   // Location
   const [state,       setState]      = useState('');
@@ -149,18 +150,19 @@ export default function ApplyScreen({ navigation }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          firstName:   firstName.trim(),
-          lastName:    lastName.trim(),
-          email:       email.trim().toLowerCase(),
-          phone:       phone.trim(),
-          state:       state       || undefined,
-          lga:         lga         || undefined,
-          ward:        ward        || undefined,
-          pollingUnit: pollingUnit || undefined,
-          education:   education   || undefined,
-          jobHistory:  jobHistory.trim()  || undefined,
-          nin:         nin.trim()         || undefined,
-          message:     message.trim()     || undefined,
+          firstName:      firstName.trim(),
+          lastName:       lastName.trim(),
+          email:          email.trim().toLowerCase(),
+          phone:          phone.trim(),
+          enrollmentCode: enrollmentCode.trim() || undefined,
+          state:          state       || undefined,
+          lga:            lga         || undefined,
+          ward:           ward        || undefined,
+          pollingUnit:    pollingUnit || undefined,
+          education:      education   || undefined,
+          jobHistory:     jobHistory.trim()  || undefined,
+          nin:            nin.trim()         || undefined,
+          message:        message.trim()     || undefined,
         }),
       });
 
@@ -249,6 +251,15 @@ export default function ApplyScreen({ navigation }) {
                 <Ionicons name="call-outline" size={18} color="#9ca3af" style={styles.icon} />
                 <TextInput style={styles.input} placeholder="08012345678" value={phone}
                   onChangeText={setPhone} keyboardType="phone-pad" />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Enrollment Code <Text style={styles.optional}>(if provided)</Text></Text>
+              <View style={styles.inputRow}>
+                <Ionicons name="barcode-outline" size={18} color="#9ca3af" style={styles.icon} />
+                <TextInput style={styles.input} placeholder="e.g. ENR-12345" value={enrollmentCode}
+                  onChangeText={setEnrollmentCode} autoCapitalize="characters" />
               </View>
             </View>
 

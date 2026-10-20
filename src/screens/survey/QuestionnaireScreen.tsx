@@ -83,7 +83,7 @@ function DateQuestion({ value, onChange }: { value: string; onChange: (v: string
     onChange(`${y}-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`);
   };
 
-  const Picker = ({ items, selected, onSelect }: { items: number[] | string[]; selected: number; onSelect: (v: number) => void }) => (
+  const Picker = ({ items, selected, onSelect }: { items: (number | string)[]; selected: number; onSelect: (v: number) => void }) => (
     <Modal transparent animationType="slide" visible>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' }}>
         <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: 380 }}>

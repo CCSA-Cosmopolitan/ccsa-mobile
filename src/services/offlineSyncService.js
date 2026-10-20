@@ -1,11 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { farmService } from './farmService';
+import { auth } from './firebase';
 
-const OFFLINE_FARMS_KEY = '@offline_farms';
-const OFFLINE_OPERATIONS_KEY = '@offline_operations'; // For other operations like updates
-const SYNC_STATUS_KEY = '@sync_status';
-const LAST_SYNC_KEY = '@last_sync';
+const getFarmsKey = () => {
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@offline_farms_${uid}` : '@offline_farms';
+};
+const getOperationsKey = () => {
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@offline_operations_${uid}` : '@offline_operations';
+};
+const getSyncStatusKey = () => {
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@sync_status_${uid}` : '@sync_status';
+};
+const getLastSyncKey = () => {
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@last_sync_${uid}` : '@last_sync';
+};
+
+let isSyncingFarmsInProgress = false;
 
 export const offlineSyncService = {
   /**
@@ -32,8 +47,8 @@ export const offlineSyncService = {
       // Add new farm to queue
       const updatedFarms = [...existingFarms, offlineFarm];
       
-      // Save to AsyncStorage
-      await AsyncStorage.setItem(OFFLINE_FARMS_KEY, JSON.stringify(updatedFarms));
+      // Save to user-partitioned AsyncStorage
+      await AsyncStorage.setItem(getFarmsKey(), JSON.stringify(updatedFarms));
       
       console.log('Farm saved offline:', offlineId);
       return offlineFarm;
@@ -48,8 +63,40 @@ export const offlineSyncService = {
    */
   async getOfflineFarms() {
     try {
-      const farmsJson = await AsyncStorage.getItem(OFFLINE_FARMS_KEY);
-      return farmsJson ? JSON.parse(farmsJson) : [];
+      const key = getFarmsKey();
+      let farmsJson = await AsyncStorage.getItem(key);
+
+      // Migrate legacy un-partitioned farms if present
+      if (!farmsJson && key !== '@offline_farms') {
+        const legacyJson = await AsyncStorage.getItem('@offline_farms');
+        if (legacyJson) {
+          farmsJson = legacyJson;
+          await AsyncStorage.setItem(key, legacyJson);
+          await AsyncStorage.removeItem('@offline_farms');
+        }
+      }
+
+      const farms = farmsJson ? JSON.parse(farmsJson) : [];
+
+      // Auto-recover any stranded 'syncing' farms older than 2 minutes back to 'pending'
+      const now = Date.now();
+      let mutated = false;
+      const recovered = farms.map(farm => {
+        if (farm.status === 'syncing') {
+          const attemptTime = farm.lastAttempt ? new Date(farm.lastAttempt).getTime() : 0;
+          if (now - attemptTime > 2 * 60 * 1000) {
+            mutated = true;
+            return { ...farm, status: 'pending', lastError: 'Previous sync timed out; queued for retry' };
+          }
+        }
+        return farm;
+      });
+
+      if (mutated) {
+        await AsyncStorage.setItem(key, JSON.stringify(recovered));
+      }
+
+      return recovered;
     } catch (error) {
       console.error('Error getting offline farms:', error);
       return [];
@@ -74,6 +121,7 @@ export const offlineSyncService = {
    */
   async updateFarmStatus(offlineId, status, error = null) {
     try {
+      const key = getFarmsKey();
       const farms = await this.getOfflineFarms();
       const updatedFarms = farms.map(farm => {
         if (farm.id === offlineId) {
@@ -88,7 +136,7 @@ export const offlineSyncService = {
         return farm;
       });
       
-      await AsyncStorage.setItem(OFFLINE_FARMS_KEY, JSON.stringify(updatedFarms));
+      await AsyncStorage.setItem(key, JSON.stringify(updatedFarms));
     } catch (error) {
       console.error('Error updating farm status:', error);
     }
@@ -99,9 +147,10 @@ export const offlineSyncService = {
    */
   async removeOfflineFarm(offlineId) {
     try {
+      const key = getFarmsKey();
       const farms = await this.getOfflineFarms();
       const updatedFarms = farms.filter(farm => farm.id !== offlineId);
-      await AsyncStorage.setItem(OFFLINE_FARMS_KEY, JSON.stringify(updatedFarms));
+      await AsyncStorage.setItem(key, JSON.stringify(updatedFarms));
     } catch (error) {
       console.error('Error removing offline farm:', error);
     }
@@ -112,9 +161,10 @@ export const offlineSyncService = {
    */
   async clearSyncedFarms() {
     try {
+      const key = getFarmsKey();
       const farms = await this.getOfflineFarms();
       const pendingFarms = farms.filter(f => f.status !== 'synced');
-      await AsyncStorage.setItem(OFFLINE_FARMS_KEY, JSON.stringify(pendingFarms));
+      await AsyncStorage.setItem(key, JSON.stringify(pendingFarms));
     } catch (error) {
       console.error('Error clearing synced farms:', error);
     }
@@ -165,6 +215,18 @@ export const offlineSyncService = {
    * Sync all pending offline farms
    */
   async syncAllFarms() {
+    if (isSyncingFarmsInProgress) {
+      console.log('Farm sync already in progress - skipping concurrent run');
+      return {
+        success: false,
+        message: 'Sync already in progress',
+        synced: 0,
+        failed: 0,
+        pending: await this.getPendingCount(),
+      };
+    }
+
+    isSyncingFarmsInProgress = true;
     try {
       // Check network connectivity
       const connected = await this.isConnected();
@@ -179,7 +241,7 @@ export const offlineSyncService = {
         };
       }
 
-      // Get all pending farms
+      // Get all pending farms (including any auto-recovered from 'syncing')
       const farms = await this.getOfflineFarms();
       const pendingFarms = farms.filter(f => 
         (f.status === 'pending' || f.status === 'failed') && 
@@ -213,8 +275,8 @@ export const offlineSyncService = {
       const failedCount = results.filter(r => !r.success).length;
       const remainingPending = await this.getPendingCount();
 
-      // Update last sync timestamp
-      await AsyncStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      // Update user-partitioned last sync timestamp
+      await AsyncStorage.setItem(getLastSyncKey(), new Date().toISOString());
 
       console.log(`Sync complete: ${syncedCount} synced, ${failedCount} failed, ${remainingPending} pending`);
 
@@ -235,6 +297,8 @@ export const offlineSyncService = {
         failed: 0,
         pending: await this.getPendingCount(),
       };
+    } finally {
+      isSyncingFarmsInProgress = false;
     }
   },
 
@@ -243,7 +307,7 @@ export const offlineSyncService = {
    */
   async getLastSyncTime() {
     try {
-      const lastSync = await AsyncStorage.getItem(LAST_SYNC_KEY);
+      const lastSync = await AsyncStorage.getItem(getLastSyncKey());
       return lastSync ? new Date(lastSync) : null;
     } catch (error) {
       console.error('Error getting last sync time:', error);
@@ -357,10 +421,15 @@ export const offlineSyncService = {
    */
   async clearAllOfflineData() {
     try {
-      await AsyncStorage.removeItem(OFFLINE_FARMS_KEY);
-      await AsyncStorage.removeItem(OFFLINE_OPERATIONS_KEY);
-      await AsyncStorage.removeItem(SYNC_STATUS_KEY);
-      await AsyncStorage.removeItem(LAST_SYNC_KEY);
+      await AsyncStorage.removeItem(getFarmsKey());
+      await AsyncStorage.removeItem(getOperationsKey());
+      await AsyncStorage.removeItem(getSyncStatusKey());
+      await AsyncStorage.removeItem(getLastSyncKey());
+      // Also clean up any legacy global keys
+      await AsyncStorage.removeItem('@offline_farms');
+      await AsyncStorage.removeItem('@offline_operations');
+      await AsyncStorage.removeItem('@sync_status');
+      await AsyncStorage.removeItem('@last_sync');
       console.log('All offline data cleared');
     } catch (error) {
       console.error('Error clearing offline data:', error);
@@ -373,6 +442,7 @@ export const offlineSyncService = {
    */
   async saveOfflineOperation(type, entityType, data) {
     try {
+      const key = getOperationsKey();
       const operations = await this.getOfflineOperations();
       
       const operation = {
@@ -387,7 +457,7 @@ export const offlineSyncService = {
       };
 
       operations.push(operation);
-      await AsyncStorage.setItem(OFFLINE_OPERATIONS_KEY, JSON.stringify(operations));
+      await AsyncStorage.setItem(key, JSON.stringify(operations));
       
       console.log('Offline operation saved:', operation.id);
       return operation;
@@ -402,7 +472,16 @@ export const offlineSyncService = {
    */
   async getOfflineOperations() {
     try {
-      const json = await AsyncStorage.getItem(OFFLINE_OPERATIONS_KEY);
+      const key = getOperationsKey();
+      let json = await AsyncStorage.getItem(key);
+      if (!json && key !== '@offline_operations') {
+        const legacy = await AsyncStorage.getItem('@offline_operations');
+        if (legacy) {
+          json = legacy;
+          await AsyncStorage.setItem(key, legacy);
+          await AsyncStorage.removeItem('@offline_operations');
+        }
+      }
       return json ? JSON.parse(json) : [];
     } catch (error) {
       console.error('Error getting offline operations:', error);
@@ -478,30 +557,10 @@ export const offlineSyncService = {
    */
   async syncSingleOperation(operation) {
     try {
-      // This would call the appropriate service based on entityType and type
       console.log('Syncing operation:', operation);
       
-      // Mark as synced
-      const operations = await this.getOfflineOperations();
-      const updated = operations.map(op =>
-        op.id === operation.id
-          ? { ...op, status: 'synced', syncedAt: new Date().toISOString() }
-          : op
-      );
-      
-      await AsyncStorage.setItem(OFFLINE_OPERATIONS_KEY, JSON.stringify(updated));
-      
-      // Remove synced operations after a while (keep for history)
-      const cleaned = updated.filter(op => 
-        op.status !== 'synced' || 
-        (Date.now() - new Date(op.syncedAt).getTime() < 24 * 60 * 60 * 1000) // Keep for 24h
-      );
-      
-      if (cleaned.length !== updated.length) {
-        await AsyncStorage.setItem(OFFLINE_OPERATIONS_KEY, JSON.stringify(cleaned));
-      }
-      
-      return true;
+      // Explicit error for unsupported operations instead of faking success
+      throw new Error(`Unsupported offline operation handler for ${operation.entityType}:${operation.type}`);
     } catch (error) {
       console.error('Error syncing operation:', error);
       
@@ -512,13 +571,13 @@ export const offlineSyncService = {
           ? { 
               ...op, 
               status: 'failed', 
-              retryCount: op.retryCount + 1,
+              retryCount: (op.retryCount || 0) + 1, 
               lastError: error.message,
             }
           : op
       );
       
-      await AsyncStorage.setItem(OFFLINE_OPERATIONS_KEY, JSON.stringify(updated));
+      await AsyncStorage.setItem(getOperationsKey(), JSON.stringify(updated));
       throw error;
     }
   },

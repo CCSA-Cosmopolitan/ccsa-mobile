@@ -30,26 +30,6 @@ const getFallbackStats = () => ({
   rejectedFarmers: 0,
 });
 
-// Network utility to check connectivity
-const checkNetworkConnectivity = async () => {
-  try {
-    // Try to fetch a simple endpoint with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch('https://www.google.com/favicon.ico', {
-      method: 'HEAD',
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch (error) {
-    console.log('Network connectivity check failed:', error.message);
-    return false;
-  }
-};
-
 export const analyticsService = {
   async getAgentStats() {
     try {
@@ -58,13 +38,6 @@ export const analyticsService = {
       // Check if user is authenticated
       if (!auth.currentUser) {
         console.log('❌ No authenticated user for analytics');
-        return getFallbackStats();
-      }
-
-      // Check network connectivity first
-      const isConnected = await checkNetworkConnectivity();
-      if (!isConnected) {
-        console.log('📊 No network connectivity - returning fallback stats');
         return getFallbackStats();
       }
 
@@ -77,7 +50,7 @@ export const analyticsService = {
         console.log('⏰ Analytics request timed out after 10 seconds');
       }, 10000); // 10 second timeout
 
-      const response = await fetch(`${API_BASE_URL}/analytics`, {
+      const response = await fetch(`${API_BASE_URL}/api/analytics`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +109,7 @@ export const analyticsService = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const response = await fetch(`${API_BASE_URL}/health`, {
+      const response = await fetch(`${API_BASE_URL}/api/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../store/AuthContext';
 import { auth } from '../../services/firebase';
+import API_CONFIG from '../../config/api';
 
 const PRIMARY = '#013358';
 const BG = '#f1f5f9';
@@ -101,32 +102,47 @@ export default function AgentAttendanceScreen({ navigation }: { navigation: any 
   const getLocation = async (): Promise<AttendanceEntry['location'] | null> => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Location permission is required for attendance.');
+      Alert.alert('Permission Required', 'Location permission is required for field attendance verification.');
       return null;
     }
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       return {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
         accuracy: loc.coords.accuracy ?? undefined,
       };
     } catch {
-      Alert.alert('Error', 'Failed to get location. Please try again.');
+      try {
+        const lastLoc = await Location.getLastKnownPositionAsync();
+        if (lastLoc) {
+          return {
+            latitude: lastLoc.coords.latitude,
+            longitude: lastLoc.coords.longitude,
+            accuracy: lastLoc.coords.accuracy ?? undefined,
+          };
+        }
+      } catch (lastErr) {
+        console.warn('Fallback location failed:', lastErr);
+      }
+      Alert.alert('Location Error', 'Unable to retrieve location coordinates. Please ensure GPS/Location is enabled.');
       return null;
     }
   };
 
   const syncToServer = async (entry: AttendanceEntry) => {
     try {
-      const token = await (auth as any).currentUser?.getIdToken();
+      const token = await (auth as any)?.currentUser?.getIdToken();
       if (!token) return;
-      const base = (require('../../config/api').default as any).BASE_URL;
-      await fetch(`${base}/api/mobile/attendance`, {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/api/attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(entry),
       });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn('Attendance sync response error:', res.status, errJson);
+      }
     } catch (e) {
       console.error('syncToServer (non-fatal):', e);
     }
@@ -137,9 +153,9 @@ export default function AgentAttendanceScreen({ navigation }: { navigation: any 
     try {
       const location = await getLocation();
       if (!location) { setLoading(false); return; }
-      const agentId = user?.uid || user?.id || (auth as any).currentUser?.uid || '';
+      const agentId = user?.fimsUserId || user?.id || user?.uid || (auth as any)?.currentUser?.uid || '';
       if (!agentId) {
-        Alert.alert('Error', 'Not authenticated. Please log in again.');
+        Alert.alert('Authentication Error', 'Not authenticated. Please log in again.');
         setLoading(false);
         return;
       }
@@ -159,8 +175,9 @@ export default function AgentAttendanceScreen({ navigation }: { navigation: any 
       setCheckInTime(new Date());
       setHistory(updated);
       Alert.alert('Checked In', `You checked in at ${formatTime(entry.timestamp)}.`);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to check in. Please try again.');
+    } catch (e: any) {
+      console.error('Check in error:', e);
+      Alert.alert('Error', e?.message || 'Failed to check in. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -171,7 +188,7 @@ export default function AgentAttendanceScreen({ navigation }: { navigation: any 
     try {
       const location = await getLocation();
       if (!location) { setLoading(false); return; }
-      const agentId = user?.uid || user?.id || (auth as any).currentUser?.uid || '';
+      const agentId = user?.fimsUserId || user?.id || user?.uid || (auth as any)?.currentUser?.uid || '';
       const duration = checkInTime
         ? Math.floor((Date.now() - checkInTime.getTime()) / 60000)
         : 0;
@@ -192,8 +209,9 @@ export default function AgentAttendanceScreen({ navigation }: { navigation: any 
       setCheckInTime(null);
       setHistory(updated);
       Alert.alert('Checked Out', `Duration: ${formatDuration(duration)}`);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to check out. Please try again.');
+    } catch (e: any) {
+      console.error('Check out error:', e);
+      Alert.alert('Error', e?.message || 'Failed to check out. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -135,3 +135,10 @@ nul
 !eas.json
 !app.json
 !backend/prisma/schema.prisma
+
+# Data spreadsheets & CSV exports
+*.csv
+*.tsv
+*.xlsx
+*.xls
+

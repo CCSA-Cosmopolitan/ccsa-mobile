@@ -26,8 +26,9 @@ class APILocationService {
       const response = await fetch(`${this.baseURL}${API_CONFIG.ENDPOINTS.STATES}`);
       const result = await response.json();
       
-      if (result.success) {
-        this.cache.states = result.data.map(state => ({
+      if (result.success && (result.data || result.states)) {
+        const rawStates = result.data || result.states || [];
+        this.cache.states = rawStates.map(state => ({
           id: state.id,
           name: this.formatName(state.name),
           value: state.id,

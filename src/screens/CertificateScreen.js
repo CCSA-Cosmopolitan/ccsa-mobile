@@ -19,6 +19,7 @@ import * as Print from 'expo-print';
 import { useFarmerStore } from '../store/farmerStore';
 import LoadingScreen from './LoadingScreen';
 import PolygonMapMobile from '../components/PolygonMapMobile';
+import API_CONFIG from '../config/api';
 
 export default function CertificateScreen({ navigation, route }) {
   const [nin, setNin] = useState('');
@@ -150,7 +151,7 @@ export default function CertificateScreen({ navigation, route }) {
   const generateVerificationUrl = (farmer) => {
     if (!farmer?.id) return farmer?.nin || '';
     const certificateId = `CCSA-${new Date().getFullYear()}-${farmer.id.slice(-6).toUpperCase()}`;
-    return `http://172.20.10.4:3000/verify-certificate/${certificateId}`;
+    return `${API_CONFIG.BASE_URL}/verify-certificate/${certificateId}`;
   };
 
   const generatePolygonSVG = (polygonData) => {

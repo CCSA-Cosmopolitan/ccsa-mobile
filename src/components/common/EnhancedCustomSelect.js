@@ -10,6 +10,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * @param {{
+ *   options?: Array<{ label: string; value: any }>;
+ *   selectedValue?: any;
+ *   onValueChange?: (value: any) => void;
+ *   placeholder?: string;
+ *   style?: any;
+ *   error?: boolean;
+ *   disabled?: boolean;
+ *   icon?: any;
+ *   searchable?: boolean;
+ *   title?: string;
+ * }} props
+ */
 const EnhancedCustomSelect = ({ 
   options = [], 
   selectedValue, 

@@ -283,6 +283,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    return updateUserPassword(newPassword, currentPassword);
+  };
+
   const value = {
     user,
     loading,
@@ -293,6 +297,7 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updateUserProfile,
     updateUserPassword,
+    changePassword,
     setError
   };
 

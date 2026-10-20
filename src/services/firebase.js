@@ -32,7 +32,12 @@ console.log('🔥 Firebase Config:', {
   hasAppId: !!firebaseConfig.appId
 });
 
-let app, auth, db;
+/** @type {any} */
+let app = null;
+/** @type {any} */
+let auth = null;
+/** @type {any} */
+let db = null;
 
 try {
   // Initialize Firebase

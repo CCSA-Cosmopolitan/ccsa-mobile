@@ -1,4 +1,5 @@
 import API_CONFIG from '../config/api';
+import { auth } from './firebase';
 
 class DuplicateFieldService {
   constructor() {
@@ -21,14 +22,25 @@ class DuplicateFieldService {
         return this.cache.get(cacheKey);
       }
 
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      try {
+        const token = await auth?.currentUser?.getIdToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (tokenErr) {
+        console.warn('Could not retrieve auth token for duplicate check:', tokenErr);
+      }
+
       // Make API call to check for duplicates
       const response = await fetch(
         `${API_CONFIG.BASE_URL}/api/farmers/check-duplicate`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({
             field: fieldName,
             value: fieldValue,

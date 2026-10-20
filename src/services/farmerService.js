@@ -3,22 +3,14 @@ import API_CONFIG from '../config/api';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
-// Fallback URLs to try if primary fails
-const FALLBACK_URLS = [
-  'http://172.20.10.4:3000',
-  'http://172.20.10.4:3000',
-  'http://172.20.10.4:3000'
-];
-
 const getAuthToken = async () => {
-  const user = auth.currentUser;
+  const user = auth?.currentUser;
   if (!user) {
     console.log('❌ No authenticated user found in getAuthToken');
     throw new Error('User not authenticated');
   }
   try {
-    const token = await user.getIdToken(true); // Force refresh
-    console.log('✅ Got auth token, length:', token.length);
+    const token = await user.getIdToken();
     return token;
   } catch (error) {
     console.error('❌ Error getting auth token:', error);
@@ -26,75 +18,14 @@ const getAuthToken = async () => {
   }
 };
 
-// Function to find a working API endpoint
-const findWorkingEndpoint = async () => {
-  const endpoints = [API_BASE_URL, ...FALLBACK_URLS.filter(url => url !== API_BASE_URL)];
-  
-  for (const endpoint of endpoints) {
-    try {
-      console.log(`🔍 Testing endpoint: ${endpoint}`);
-      const healthUrl = endpoint.replace('/api', '') + '/api/health';
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      
-      const response = await fetch(healthUrl, {
-        method: 'GET',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        console.log(`✅ Working endpoint found: ${endpoint}`);
-        return endpoint;
-      }
-    } catch (error) {
-      console.log(`❌ Endpoint failed: ${endpoint} - ${error.message}`);
-    }
-  }
-  
-  throw new Error('No working API endpoints found. Please check your internet connection.');
-};
-
 const makeAuthenticatedRequest = async (url, options = {}) => {
   try {
-    console.log('🔍 Starting makeAuthenticatedRequest');
-    console.log('🌐 Original URL:', url);
-    
-    // if (DEBUG_NETWORK) {
-    //   await networkDebug.checkConnectivity();
-    // }
-    
-    // Check network connectivity first
-    try {
-      console.log('🔍 Testing basic network connectivity...');
-      const testResponse = await fetch('https://www.google.com', { 
-        method: 'HEAD',
-        timeout: 5000 
-      });
-      console.log('✅ Basic network connectivity OK');
-    } catch (netError) {
-      console.error('❌ Network connectivity test failed:', netError);
-      throw new Error('No internet connection available');
-    }
-    
-    // Find working endpoint if URL contains the base URL
-    let finalUrl = url;
-    if (url.includes(API_BASE_URL)) {
-      try {
-        const workingEndpoint = await findWorkingEndpoint();
-        finalUrl = url.replace(API_BASE_URL, workingEndpoint);
-        console.log('🔄 Updated URL to working endpoint:', finalUrl);
-      } catch (error) {
-        console.warn('⚠️ Could not find working endpoint, using original URL');
-      }
-    }
-    
     const token = await getAuthToken();
-    console.log('🌐 Making request to:', finalUrl);
-    console.log('🔑 Using token (first 20 chars):', token.substring(0, 20) + '...');
-    
+
+    const controller = new AbortController();
+    const timeoutMs = options.timeout || API_CONFIG.TIMEOUT || 15000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     const requestOptions = {
       ...options,
       headers: {
@@ -102,35 +33,32 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
         'Authorization': `Bearer ${token}`,
         ...options.headers,
       },
+      signal: controller.signal,
     };
-    
-    console.log('📋 Request method:', requestOptions.method || 'GET');
-    
-    const response = await fetch(finalUrl, requestOptions);
-    
-    console.log('📊 Response status:', response.status);
-    console.log('📊 Response URL:', response.url);
-    
+
+    console.log(`🌐 [farmerService] ${requestOptions.method || 'GET'} -> ${url}`);
+
+    const response = await fetch(url, requestOptions);
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.log('❌ API Error Response:', errorData);
+      console.warn('❌ API Error Response:', response.status, errorData);
       
-      // Create a more detailed error
       const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
       error.status = response.status;
       error.data = errorData;
       throw error;
     }
-    
+
     return response.json();
   } catch (error) {
-    console.error('❌ makeAuthenticatedRequest error:', error);
-    console.error('❌ Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      cause: error.cause
-    });
+    if (error.name === 'AbortError') {
+      const timeoutErr = new Error('Network request timed out. Please check your internet connection.');
+      timeoutErr.name = 'TimeoutError';
+      throw timeoutErr;
+    }
+    console.error('❌ makeAuthenticatedRequest error:', error?.message || error);
     throw error;
   }
 };

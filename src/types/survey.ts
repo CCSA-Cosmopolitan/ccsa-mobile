@@ -58,6 +58,7 @@ export interface SurveyFarmerRef {
   phone: string;
   state: string | null;
   lga: string | null;
+  surveyed?: boolean;
 }
 
 export interface SurveyResponseResult {

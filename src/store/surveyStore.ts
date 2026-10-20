@@ -15,8 +15,16 @@ const { offlineCacheService } = require('../services/offlineCacheService') as {
   };
 };
 
-const CACHE_KEY_SURVEYS = '@cache_active_surveys';
-const CACHE_KEY_SURVEY_DETAIL = (id: string) => `@cache_survey_detail_${id}`;
+import { auth } from '../services/firebase';
+
+const getCacheKeySurveys = () => {
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@cache_active_surveys_${uid}` : '@cache_active_surveys';
+};
+const getCacheKeySurveyDetail = (id: string) => {
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@cache_survey_detail_${uid}_${id}` : `@cache_survey_detail_${id}`;
+};
 const CACHE_EXPIRY_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 // ─── State shape ─────────────────────────────────────────────────────────────
@@ -97,13 +105,13 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
       const surveys = await surveyService.getActiveSurveys();
       // Cache for offline fallback
       offlineCacheService
-        .setCache(CACHE_KEY_SURVEYS, surveys, CACHE_EXPIRY_MS)
+        .setCache(getCacheKeySurveys(), surveys, CACHE_EXPIRY_MS)
         .catch(() => { /* non-fatal */ });
       set({ surveys, loadingSurveys: false });
     } catch (e: any) {
       // Try offline cache
       try {
-        const cached = await offlineCacheService.getCache(CACHE_KEY_SURVEYS) as SurveySummary[] | null;
+        const cached = await offlineCacheService.getCache(getCacheKeySurveys()) as SurveySummary[] | null;
         if (cached) {
           set({
             surveys: cached,
@@ -126,7 +134,7 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
       const survey = await surveyService.getSurveyDetail(surveyId);
       // Cache for offline fallback
       offlineCacheService
-        .setCache(CACHE_KEY_SURVEY_DETAIL(surveyId), survey, CACHE_EXPIRY_MS)
+        .setCache(getCacheKeySurveyDetail(surveyId), survey, CACHE_EXPIRY_MS)
         .catch(() => { /* non-fatal */ });
       // Pre-populate answer drafts with empty values
       const answers: Record<string, AnswerDraft> = {};
@@ -137,7 +145,7 @@ export const useSurveyStore = create<SurveyState>((set, get) => ({
     } catch (e: any) {
       // Try offline cache
       try {
-        const cached = await offlineCacheService.getCache(CACHE_KEY_SURVEY_DETAIL(surveyId)) as SurveyDetail | null;
+        const cached = await offlineCacheService.getCache(getCacheKeySurveyDetail(surveyId)) as SurveyDetail | null;
         if (cached && Array.isArray(cached.questions)) {
           const answers: Record<string, AnswerDraft> = {};
           for (const q of cached.questions) {
