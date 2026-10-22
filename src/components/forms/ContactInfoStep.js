@@ -126,12 +126,19 @@ export default function ContactInfoStep({ control, errors, setValue, watch }) {
     }
   };
 
-  const handleVerificationComplete = (verified) => {
-    setPhoneVerified(verified);
+  const handleVerificationComplete = () => {
+    setPhoneVerified(true);
     setShowPhoneVerification(false);
-    if (verified) {
-      Alert.alert('Success', 'Phone number verified successfully!');
-    }
+    Alert.alert('Success', 'Phone number verified successfully!');
+  };
+
+  const handleVerificationSkip = () => {
+    setPhoneVerified(false);
+    setShowPhoneVerification(false);
+    Alert.alert(
+      'Verification Skipped',
+      'Phone verification was skipped. You can proceed with enrollment.'
+    );
   };
 
   // Handle duplicate field checks
@@ -557,6 +564,7 @@ export default function ContactInfoStep({ control, errors, setValue, watch }) {
         phoneNumber={phoneToVerify}
         onVerificationComplete={handleVerificationComplete}
         onCancel={() => setShowPhoneVerification(false)}
+        onSkip={handleVerificationSkip}
       />
 
       {/* Duplicate Field Alert */}

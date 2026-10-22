@@ -243,15 +243,8 @@ class PhoneVerificationService {
         }
       }
 
-      // For backend verification
-      if (this.verificationId.startsWith('backend_')) {
-        return await this.verifyCodeViaBackend(verificationCode);
-      }
-
-      // Default case - treat as mock
-      console.log('✅ Default verification successful');
-      return true;
-
+      // For backend / real verification (e.g. Termii or backend service)
+      return await this.verifyCodeViaBackend(verificationCode);
     } catch (error) {
       console.error('❌ Error verifying code:', error);
       throw this.handleError(error);
@@ -290,7 +283,8 @@ class PhoneVerificationService {
 
       if (!response.ok) {
         if (response.status === 400) {
-          throw new Error('Invalid verification code. Please check and try again.');
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || 'Invalid verification code. Please check and try again.');
         }
         throw new Error(`Verification service error: ${response.status}`);
       }
