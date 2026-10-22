@@ -30,6 +30,10 @@ import HomeScreen from '../screens/HomeScreen';
 import ZoraScreen from '../screens/ZoraScreen';
 import CorrectionNavigator from './CorrectionNavigator';
 import SurveyNavigator from './SurveyNavigator';
+import HouseholdNavigator from './HouseholdNavigator';
+import HouseholdDetailsScreen from '../screens/household/HouseholdDetailsScreen';
+import HouseholdSlipScreen from '../screens/household/HouseholdSlipScreen';
+import BrandedSplashScreen from '../screens/BrandedSplashScreen';
 
 
 const Stack = createStackNavigator();
@@ -85,10 +89,34 @@ function MainTabNavigator() {
   );
 }
 
+import AgriBusinessNavigator from './AgriBusinessNavigator';
+
 // Drawer Navigator for secondary navigation
 function DrawerNavigator() {
+  const { user } = useAuth();
+  const role = user?.role;
+  const isSuper = role === 'admin' || role === 'manager';
+
+  const initialRoute =
+    role === 'household_agent'
+      ? 'HouseholdApp'
+      : role === 'agri_business_agent'
+      ? 'AgriBusinessApp'
+      : role === 'survey_agent'
+      ? 'SurveyApp'
+      : role === 'data_correction_agent'
+      ? 'CorrectionApp'
+      : 'MainTabs';
+
+  const canAccessFarmers = isSuper || role === 'agent' || !role;
+  const canAccessHouseholds = isSuper || role === 'household_agent';
+  const canAccessAgriBusiness = isSuper || role === 'agri_business_agent';
+  const canAccessSurveys = isSuper || role === 'survey_agent';
+  const canAccessCorrections = isSuper || role === 'data_correction_agent';
+
   return (
     <Drawer.Navigator
+      initialRouteName={initialRoute}
       screenOptions={{
         drawerActiveTintColor: '#013358',
         drawerInactiveTintColor: 'gray',
@@ -98,32 +126,60 @@ function DrawerNavigator() {
         headerTintColor: '#fff',
       }}
     >
-      <Drawer.Screen 
-        name="MainTabs" 
-        component={MainTabNavigator} 
-        options={{ 
-          title: 'FIMS Dashboard',
-          drawerIcon: ({ color }) => <Ionicons name="home-outline" size={22} color={color} />
-        }}
-      />
-      <Drawer.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{
-          drawerIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />
-        }}
-      />
-      <Drawer.Screen 
-        name="Analytics" 
-        component={AnalyticsScreen} 
-        options={{
-          drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={22} color={color} />
-        }}
-      />
+      {canAccessFarmers && (
+        <Drawer.Screen 
+          name="MainTabs" 
+          component={MainTabNavigator} 
+          options={{ 
+            title: 'Farmer Enrollment',
+            drawerIcon: ({ color }) => <Ionicons name="leaf-outline" size={22} color={color} />
+          }}
+        />
+      )}
+      {canAccessHouseholds && (
+        <Drawer.Screen 
+          name="HouseholdApp" 
+          component={HouseholdNavigator} 
+          options={{ 
+            title: 'Household Enrollment',
+            drawerIcon: ({ color }) => <Ionicons name="home-outline" size={22} color={color} />
+          }}
+        />
+      )}
+      {canAccessAgriBusiness && (
+        <Drawer.Screen 
+          name="AgriBusinessApp" 
+          component={AgriBusinessNavigator} 
+          options={{ 
+            title: 'Agri-Business Directory',
+            drawerIcon: ({ color }) => <Ionicons name="business-outline" size={22} color={color} />
+          }}
+        />
+      )}
+      {canAccessSurveys && (
+        <Drawer.Screen 
+          name="SurveyApp" 
+          component={SurveyNavigator} 
+          options={{ 
+            title: 'Field Surveys',
+            drawerIcon: ({ color }) => <Ionicons name="clipboard-outline" size={22} color={color} />
+          }}
+        />
+      )}
+      {canAccessCorrections && (
+        <Drawer.Screen 
+          name="CorrectionApp" 
+          component={CorrectionNavigator} 
+          options={{ 
+            title: 'Data Correction',
+            drawerIcon: ({ color }) => <Ionicons name="pencil-outline" size={22} color={color} />
+          }}
+        />
+      )}
       <Drawer.Screen 
         name="ZoraAI" 
         component={ZoraScreen} 
-        options={{
+        options={{ 
           title: 'Zora AI Agronomist',
           drawerIcon: ({ color }) => <Ionicons name="sparkles" size={22} color="#059669" />
         }}
@@ -131,8 +187,22 @@ function DrawerNavigator() {
       <Drawer.Screen 
         name="Attendance" 
         component={AttendanceScreen} 
-        options={{
+        options={{ 
           drawerIcon: ({ color }) => <Ionicons name="time-outline" size={22} color={color} />
+        }}
+      />
+      <Drawer.Screen 
+        name="Analytics" 
+        component={AnalyticsScreen} 
+        options={{ 
+          drawerIcon: ({ color }) => <Ionicons name="analytics-outline" size={22} color={color} />
+        }}
+      />
+      <Drawer.Screen 
+        name="Profile" 
+        component={ProfileScreen} 
+        options={{ 
+          drawerIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />
         }}
       />
     </Drawer.Navigator>
@@ -185,13 +255,12 @@ export default function AppNavigator() {
       {user ? (
         // Authenticated screens
         <>
-          {/* Module hub — no back button so it acts as the root */}
+          {/* Main App with drawer — direct access without intermediate module hub */}
           <Stack.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{ headerShown: false, gestureEnabled: false }}
+            name="MainApp"
+            component={DrawerNavigator}
+            options={{ headerShown: false }}
           />
-          {/* Farm Enrollment — existing flow, untouched */}
           <Stack.Screen
             name="EnrollmentApp"
             component={DrawerNavigator}
@@ -216,7 +285,12 @@ export default function AppNavigator() {
           />
           <Stack.Screen
             name="AgriBusinessApp"
-            component={AgriBusinessScreen}
+            component={AgriBusinessNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HouseholdApp"
+            component={HouseholdNavigator}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -228,6 +302,24 @@ export default function AppNavigator() {
             name="FarmerDetails" 
             component={FarmerDetailsScreen}
             options={{ headerShown: true, title: 'Farmer Details' }}
+          />
+          <Stack.Screen 
+            name="HouseholdDetails" 
+            component={HouseholdDetailsScreen}
+            options={{ 
+              headerShown: true, 
+              title: 'Household Details',
+              headerBackTitle: 'Back'
+            }}
+          />
+          <Stack.Screen 
+            name="HouseholdSlip" 
+            component={HouseholdSlipScreen}
+            options={{ 
+              headerShown: true, 
+              title: 'Dwelling Slip',
+              headerBackTitle: 'Back'
+            }}
           />
           <Stack.Screen 
             name="AddFarm" 

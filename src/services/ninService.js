@@ -191,6 +191,14 @@ export const ninService = {
                 maritalStatus: maritalstatus || '',
                 employmentStatus: emplymentstatus || '',
                 photoUrl: photo || '', // Add photo URL from NIN API
+                email: email || '',
+                phone: telephoneno || msisdn || '',
+                educationLevel: educationallevel || '',
+                birthState: birthstate || '',
+                birthLga: birthlga || '',
+                residenceState: residence_state || '',
+                residenceLga: residence_lga || '',
+                residenceAddress: residence_address || residenceAddress1 || '',
                 // Raw data for debugging
                 _rawData: result.data
               };
@@ -315,6 +323,14 @@ export const ninService = {
               maritalStatus: maritalstatus || '',
               employmentStatus: emplymentstatus || '',
               photoUrl: photo || '', // Add photo URL from NIN API
+                email: email || '',
+                phone: telephoneno || msisdn || '',
+                educationLevel: educationallevel || '',
+                birthState: birthstate || '',
+                birthLga: birthlga || '',
+                residenceState: residence_state || '',
+                residenceLga: residence_lga || '',
+                residenceAddress: residence_address || residenceAddress1 || '',
               // Raw data for debugging
               _rawData: authResult.data
             };

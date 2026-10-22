@@ -14,6 +14,12 @@ import brand from '../theme/brand';
 
 const MODULES = [
   {
+    key: 'household',
+    icon: 'home-outline',
+    title: 'Household Capture',
+    desc: 'Individuals, dependents, PUE & network capture',
+  },
+  {
     key: 'agribusiness',
     icon: 'business-outline',
     title: 'Agri-Business',

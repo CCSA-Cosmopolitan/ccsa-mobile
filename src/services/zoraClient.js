@@ -1,5 +1,19 @@
-import { Audio } from 'expo-av';
-import { File, Paths } from 'expo-file-system';
+let Audio = null;
+try {
+  Audio = require('expo-av')?.Audio || null;
+} catch {
+  Audio = null;
+}
+let File = null;
+let Paths = null;
+try {
+  const ef = require('expo-file-system');
+  File = ef?.File || null;
+  Paths = ef?.Paths || null;
+} catch {
+  File = null;
+  Paths = null;
+}
 import API_CONFIG from '../config/api';
 import { auth } from './firebase';
 
@@ -59,6 +73,10 @@ export async function transcribeZora(uri, language) {
 }
 export async function stopZoraAudio() { audioGeneration++; if (stopPlayback) await stopPlayback(); }
 export async function speakZora(text, language) {
+  if (!Audio) {
+    console.warn('Audio playback disabled: expo-av not available');
+    return;
+  }
   await stopZoraAudio();
   const generation=audioGeneration;
   const response = await zoraRequest('/api/audio/speech', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, language }) });

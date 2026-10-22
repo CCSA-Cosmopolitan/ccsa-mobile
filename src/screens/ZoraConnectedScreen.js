@@ -2,7 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, ActivityIndicator, Image, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+let Audio = null;
+try {
+  Audio = require('expo-av')?.Audio || null;
+} catch {
+  Audio = null;
+}
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { askZora, transcribeZora, speakZora, stopZoraAudio } from '../services/zoraClient';
@@ -28,7 +33,7 @@ export default function ZoraConnectedScreen({ navigation }) {
     try{const reply=await askZora({message:question,language,image,conversationId:conversation.current});if(!mounted.current||!focused.current||AppState.currentState!=="active")return;conversation.current=reply.conversationId;setMessages(old=>[...old,{id:String(Date.now())+'-reply',role:'zora',text:reply.spoken}]);await listen(reply.spoken);}
     catch(e){if(mounted.current)setError(e.message||'Zora is unavailable. Please retry.');}finally{lock.current=false;if(mounted.current)setBusy(false);}}
   async function finish(){const r=recorder.current;if(!r)return;recorder.current=null;clearTimeout(timer.current);setRecording(false);setBusy(true);try{await r.stopAndUnloadAsync();if(!mounted.current||!focused.current)return;const question=await transcribeZora(r.getURI(),language);if(!mounted.current||!focused.current)return;setBusy(false);await send(question);}catch(e){if(mounted.current)setError(e.message);}finally{if(mounted.current)setBusy(false);}}
-  async function mic(){if(recording){await finish();return;}if(speaking){await stopZoraAudio();return;}if(busy||micLock.current)return;micLock.current=true;setError('');try{const permission=await Audio.requestPermissionsAsync();if(!mounted.current||!focused.current)return;if(!permission.granted)throw new Error('Please allow microphone access.');await Audio.setAudioModeAsync({allowsRecordingIOS:true,playsInSilentModeIOS:true});const result=await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);if(!mounted.current||!focused.current){await result.recording.stopAndUnloadAsync();return;}recorder.current=result.recording;setRecording(true);timer.current=setTimeout(()=>void finish(),60000);}catch(e){if(mounted.current)setError(e.message);}finally{micLock.current=false;}}
+  async function mic(){if(!Audio){setError('Voice recording requires an updated client build. You can type your questions or use the camera!');return;}if(recording){await finish();return;}if(speaking){await stopZoraAudio();return;}if(busy||micLock.current)return;micLock.current=true;setError('');try{const permission=await Audio.requestPermissionsAsync();if(!mounted.current||!focused.current)return;if(!permission.granted)throw new Error('Please allow microphone access.');await Audio.setAudioModeAsync({allowsRecordingIOS:true,playsInSilentModeIOS:true});const result=await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);if(!mounted.current||!focused.current){await result.recording.stopAndUnloadAsync();return;}recorder.current=result.recording;setRecording(true);timer.current=setTimeout(()=>void finish(),60000);}catch(e){if(mounted.current)setError(e.message);}finally{micLock.current=false;}}
   async function photo(){if(busy||recording)return;try{const p=await ImagePicker.requestCameraPermissionsAsync();if(!p.granted)throw new Error('Please allow camera access.');const result=await ImagePicker.launchCameraAsync({quality:0.5,base64:true});const asset=result.assets?.[0];if(!result.canceled&&asset?.base64)await send(text.trim()||'What can you observe about this plant? Ask me for any details you need.','data:image/jpeg;base64,'+asset.base64);}catch(e){setError(e.message);}}
   const copy=COPY[language];
   return <SafeAreaView style={{flex:1,backgroundColor:'#f7f8f2'}} edges={['top','left','right']}><View style={{flexDirection:'row',alignItems:'center',padding:18,gap:16}}><Pressable accessibilityLabel="Back" onPress={()=>navigation.goBack()}><Ionicons name="arrow-back" size={26} color="#235d3a"/></Pressable><Text style={{fontSize:28,fontWeight:'bold',color:'#235d3a'}}>Zora</Text><Text style={{flex:1,textAlign:'right',color:'#52634f'}}>CCSA • Free access</Text></View>

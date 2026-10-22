@@ -19,7 +19,8 @@ export default function PhoneVerificationModal({
   visible, 
   phoneNumber, 
   onVerificationComplete, 
-  onCancel 
+  onCancel,
+  onSkip,
 }) {
   const [step, setStep] = useState('send'); // 'send' or 'verify'
   const [verificationCode, setVerificationCode] = useState('');
@@ -85,7 +86,25 @@ export default function PhoneVerificationModal({
       );
     } catch (error) {
       console.error('Send code error:', error);
-      Alert.alert('Error', error.message || 'Failed to send verification code');
+      if (onSkip) {
+        Alert.alert(
+          'Failed to Send Code',
+          (error.message || 'Failed to send verification code') + '\n\nWould you like to skip phone verification for now?',
+          [
+            { text: 'Retry', onPress: handleSendCode },
+            { 
+              text: 'Skip Verification', 
+              onPress: () => {
+                phoneVerificationService.clearVerification();
+                onSkip();
+              }
+            },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.message || 'Failed to send verification code');
+      }
     } finally {
       setLoading(false);
     }
@@ -119,7 +138,24 @@ export default function PhoneVerificationModal({
       }
     } catch (error) {
       console.error('Verify code error:', error);
-      Alert.alert('Verification Failed', error.message || 'Invalid verification code');
+      if (onSkip) {
+        Alert.alert(
+          'Verification Failed',
+          (error.message || 'Invalid verification code') + '\n\nWould you like to skip phone verification for now?',
+          [
+            { text: 'Try Again', style: 'cancel' },
+            { 
+              text: 'Skip Verification', 
+              onPress: () => {
+                phoneVerificationService.clearVerification();
+                onSkip();
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Verification Failed', error.message || 'Invalid verification code');
+      }
     } finally {
       setLoading(false);
     }
@@ -192,6 +228,18 @@ export default function PhoneVerificationModal({
         <TouchableOpacity style={styles.secondaryButton} onPress={onCancel}>
           <Text style={styles.secondaryButtonText}>Cancel</Text>
         </TouchableOpacity>
+
+        {onSkip && (
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={() => {
+              phoneVerificationService.clearVerification();
+              onSkip();
+            }}
+          >
+            <Text style={styles.skipButtonText}>Skip Verification for Now</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -261,6 +309,18 @@ export default function PhoneVerificationModal({
         >
           <Text style={styles.secondaryButtonText}>Change Number</Text>
         </TouchableOpacity>
+
+        {onSkip && (
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={() => {
+              phoneVerificationService.clearVerification();
+              onSkip();
+            }}
+          >
+            <Text style={styles.skipButtonText}>Skip Verification</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -404,5 +464,16 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 16,
     fontWeight: '500',
+  },
+  skipButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  skipButtonText: {
+    fontSize: 14,
+    color: '#d97706',
+    fontWeight: '600',
   },
 });

@@ -16,7 +16,7 @@ const CustomSelect = ({
   selectedValue, 
   onValueChange, 
   placeholder = 'Select an option',
-  style,
+  style = null,
   error = false,
   disabled = false 
 }) => {

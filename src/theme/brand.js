@@ -3,6 +3,7 @@ const brand = {
     primary: '#013358',
     primaryHover: '#02426F',
     primaryActive: '#012944',
+    primaryDark: '#012944',
     primaryLight: '#DCEAF3',
     primaryExtraLight: '#F3F8FC',
     white: '#FFFFFF',

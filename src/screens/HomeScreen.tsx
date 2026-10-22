@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,102 +6,103 @@ import {
   ScrollView,
   StatusBar,
   Alert,
+  StyleSheet,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../store/AuthContext';
 import brand from '../theme/brand';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48) / 2; // 2-column grid spacing
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Module {
   id: string;
   title: string;
-  description: string;
+  subtitle: string;
+  category: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   navTarget: string;
   roles: string[];
-  iconColor: string;
-  iconBg: string;
 }
 
 // ─── Module registry ─────────────────────────────────────────────────────────
 
 const MODULES: Module[] = [
   {
+    id: 'household',
+    title: 'Household Capture',
+    subtitle: 'Family leaders, dependents, PUE energy & networks',
+    category: 'COMMUNITY AID',
+    icon: 'home-outline',
+    navTarget: 'HouseholdApp',
+    roles: ['household_agent', 'admin', 'manager'],
+  },
+  {
     id: 'enrollment',
     title: 'Farm Enrollment',
-    description: 'Register new farmers and capture farm data with NIN validation.',
-    icon: 'leaf',
+    subtitle: 'Farmers registration, land polygons & identity',
+    category: 'CORE FIELD',
+    icon: 'leaf-outline',
     navTarget: 'EnrollmentApp',
-    roles: ['agent', 'admin'],
-    iconColor: brand.colors.primary,
-    iconBg: brand.colors.primaryExtraLight,
+    roles: ['agent', 'admin', 'manager'],
+  },
+  {
+    id: 'survey',
+    title: 'Field Surveys',
+    subtitle: 'Project questionnaires & field assessments',
+    category: 'MONITORING',
+    icon: 'clipboard-outline',
+    navTarget: 'SurveyApp',
+    roles: ['survey_agent', 'admin', 'manager'],
   },
   {
     id: 'correction',
     title: 'Data Correction',
-    description: 'Search, review and update existing farmer records.',
-    icon: 'create-outline',
+    subtitle: 'Audit, verify and resolve data exceptions',
+    category: 'DATA AUDIT',
+    icon: 'pencil-outline',
     navTarget: 'CorrectionApp',
-    roles: ['data_correction_agent', 'admin'],
-    iconColor: '#92400e',
-    iconBg: '#fef3c7',
-  },
-  {
-    id: 'survey',
-    title: 'Surveys',
-    description: 'Conduct questionnaires with registered farmers in the field.',
-    icon: 'clipboard-outline',
-    navTarget: 'SurveyApp',
-    roles: ['survey_agent', 'admin'],
-    iconColor: brand.colors.success,
-    iconBg: '#d1fae5',
+    roles: ['data_correction_agent', 'admin', 'manager'],
   },
   {
     id: 'agribusiness',
     title: 'Agri-Business',
-    description: 'Capture stakeholders, KYB readiness and partnership opportunities.',
+    subtitle: 'Commercial stakeholders & KYB onboarding',
+    category: 'COMMERCIAL',
     icon: 'business-outline',
     navTarget: 'AgriBusinessApp',
     roles: ['agri_business_agent', 'manager', 'admin'],
-    iconColor: brand.colors.primary,
-    iconBg: brand.colors.primaryLight,
   },
   {
     id: 'zora',
-    title: 'Zora AI Agronomist',
-    description: 'Instant voice & camera diagnosis for crop pests, plant disease, and savanna climate spray advice.',
-    icon: 'sparkles',
+    title: 'Zora Agronomist',
+    subtitle: 'Agronomic guidance, diagnosis & weather AI',
+    category: 'AGRI ADVISORY',
+    icon: 'sparkles-outline',
     navTarget: 'ZoraApp',
-    roles: ['agent', 'data_correction_agent', 'survey_agent', 'agri_business_agent', 'manager', 'admin'],
-    iconColor: '#059669',
-    iconBg: '#d1fae5',
+    roles: ['agent', 'household_agent', 'data_correction_agent', 'survey_agent', 'agri_business_agent', 'manager', 'admin'],
   },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
-  agent: 'Enrollment Agent',
-  data_correction_agent: 'Correction Agent',
-  survey_agent: 'Survey Agent',
-  agri_business_agent: 'Agri-Business Agent',
-  manager: 'Manager',
-  admin: 'Administrator',
+  agent: 'Field Enrollment Agent',
+  household_agent: 'Household Enrollment Agent',
+  data_correction_agent: 'Data Correction Agent',
+  survey_agent: 'Field Survey Agent',
+  agri_business_agent: 'Agri-Business Officer',
+  manager: 'Field Operations Manager',
+  admin: 'System Administrator',
 };
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { user, signOut } = useAuth() as any;
   const role: string = user?.role ?? 'agent';
 
+  // Visible modules for the user's role
   const visibleModules = MODULES.filter((m) => m.roles.includes(role));
-
-  // Single-module users skip the home screen entirely
-  useEffect(() => {
-    if (visibleModules.length === 1) {
-      navigation.replace(visibleModules[0].navTarget);
-    }
-  }, []);
 
   const displayName: string =
     user?.firstName
@@ -115,149 +116,95 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          try { await signOut(); } catch {}
+          try {
+            await signOut();
+          } catch {}
         },
       },
     ]);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: brand.colors.offWhite }}>
-      <StatusBar barStyle="light-content" backgroundColor={brand.colors.primary} />
+    <View style={styles.root}>
+      <StatusBar barStyle="light-content" backgroundColor="#012440" />
 
-      {/* ── Header ── */}
-      <View
-        style={{
-          backgroundColor: brand.colors.primary,
-          paddingTop: 52,
-          paddingBottom: 32,
-          paddingHorizontal: 24,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      {/* ── Modern Header ── */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
           <View style={{ flex: 1, marginRight: 12 }}>
-            <Text style={{ color: '#93c5fd', fontSize: 13, marginBottom: 4 }}>
-              Welcome back
-            </Text>
-            <Text
-              style={{ color: brand.colors.white, fontSize: 22, fontWeight: '700', letterSpacing: 0 }}
-              numberOfLines={1}
-            >
+            <Text style={styles.greeting}>Welcome back,</Text>
+            <Text style={styles.name} numberOfLines={1}>
               {displayName}
             </Text>
-            {/* Role badge */}
-            <View
-              style={{
-                marginTop: 10,
-                alignSelf: 'flex-start',
-                backgroundColor: 'rgba(255,255,255,0.14)',
-                borderRadius: 20,
-                paddingHorizontal: 12,
-                paddingVertical: 4,
-              }}
-            >
-              <Text style={{ color: brand.colors.primaryLight, fontSize: 12, fontWeight: '600' }}>
-                {ROLE_LABELS[role] ?? role}
-              </Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleText}>{ROLE_LABELS[role] ?? role}</Text>
             </View>
           </View>
 
-          {/* Sign-out button */}
           <TouchableOpacity
             onPress={handleSignOut}
             activeOpacity={0.75}
-            style={{
-              padding: 10,
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              borderRadius: 10,
-              marginTop: 2,
-            }}
+            style={styles.signOutBtn}
           >
-            <Ionicons name="log-out-outline" size={22} color="#ffffff" />
+            <Ionicons name="log-out-outline" size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── Module cards ── */}
+      {/* ── Grid View ── */}
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 48 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text
-          style={{
-            fontSize: 11,
-            fontWeight: '700',
-            color: '#94a3b8',
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-            marginBottom: 14,
-          }}
-        >
-          Your Modules
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>SELECT MODULE</Text>
+          <Text style={styles.sectionSubtitle}>
+            {visibleModules.length} operational modules available
+          </Text>
+        </View>
 
-        {visibleModules.map((mod) => (
-          <TouchableOpacity
-            key={mod.id}
-            onPress={() => navigation.navigate(mod.navTarget)}
-            activeOpacity={0.8}
-            style={{
-              backgroundColor: brand.colors.white,
-              borderRadius: 14,
-              padding: 20,
-              marginBottom: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.06,
-              shadowRadius: 6,
-              elevation: 2,
-            }}
-          >
-            {/* Icon */}
-            <View
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                backgroundColor: mod.iconBg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 16,
-              }}
+        {/* 2-Column Grid */}
+        <View style={styles.grid}>
+          {visibleModules.map((mod) => (
+            <TouchableOpacity
+              key={mod.id}
+              onPress={() => navigation.navigate(mod.navTarget)}
+              activeOpacity={0.85}
+              style={styles.gridCard}
             >
-              <Ionicons name={mod.icon} size={26} color={mod.iconColor} />
-            </View>
+              {/* Top Row: Category Tag & Icon */}
+              <View style={styles.cardHeader}>
+                <View style={styles.badgeTag}>
+                  <Text style={styles.badgeText}>{mod.category}</Text>
+                </View>
+                <View style={styles.iconBox}>
+                  <Ionicons name={mod.icon} size={22} color="#013358" />
+                </View>
+              </View>
 
-            {/* Text */}
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: brand.colors.text, marginBottom: 3 }}>
-                {mod.title}
-              </Text>
-              <Text style={{ fontSize: 13, color: brand.colors.darkGray, lineHeight: 18 }}>
-                {mod.description}
-              </Text>
-            </View>
+              {/* Text Information */}
+              <View style={styles.cardBody}>
+                <Text style={styles.cardTitle}>{mod.title}</Text>
+                <Text style={styles.cardSubtitle} numberOfLines={2}>
+                  {mod.subtitle}
+                </Text>
+              </View>
 
-            <Ionicons name="chevron-forward" size={18} color="#cbd5e1" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-        ))}
+              {/* Footer Action */}
+              <View style={styles.cardFooter}>
+                <Text style={styles.openText}>Open module</Text>
+                <Ionicons name="chevron-forward" size={14} color="#013358" />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        {/* No modules assigned */}
+        {/* No modules assigned fallback */}
         {visibleModules.length === 0 && (
-          <View style={{ alignItems: 'center', paddingTop: 72 }}>
-            <Ionicons name="lock-closed-outline" size={52} color="#cbd5e1" />
-            <Text
-              style={{
-                color: '#94a3b8',
-                fontSize: 15,
-                marginTop: 14,
-                textAlign: 'center',
-                lineHeight: 22,
-              }}
-            >
-              No modules are assigned to your account.{'\n'}Contact your administrator.
+          <View style={styles.emptyContainer}>
+            <Ionicons name="lock-closed-outline" size={48} color="#94a3b8" />
+            <Text style={styles.emptyText}>
+              No operational modules are assigned to your role.{'\n'}Please contact your field supervisor.
             </Text>
           </View>
         )}
@@ -265,3 +212,175 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  header: {
+    backgroundColor: '#012440',
+    paddingTop: 52,
+    paddingBottom: 22,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  greeting: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+  name: {
+    color: '#ffffff',
+    fontSize: 21,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  roleBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  roleText: {
+    color: '#bae6fd',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  signOutBtn: {
+    padding: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    marginTop: 2,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    marginBottom: 14,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  gridCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+    justifyContent: 'space-between',
+    minHeight: 180,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  badgeTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: '#475569',
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: '#f0f6fa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#dceaf3',
+  },
+  cardBody: {
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    lineHeight: 15,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 8,
+  },
+  openText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#013358',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: 64,
+  },
+  emptyText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+});
