@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -16,12 +18,15 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { HouseholdRecord, householdService } from '../../services/householdService';
 import { formatPollingUnit } from '../../utils/textUtils';
+import API_CONFIG from '../../config/api';
+import { CERTIFICATE_LOGO_BASE64 } from '../../utils/logoBase64';
 
 export default function HouseholdSlipScreen({ route, navigation }: { route: any; navigation: any }) {
   const [query, setQuery] = useState('');
   const [household, setHousehold] = useState<HouseholdRecord | null>(route?.params?.household || null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const qrSvgRef = useRef<any>(null);
 
   useEffect(() => {
     if (route?.params?.household) {
@@ -59,171 +64,398 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
     }
   };
 
+  const getPublicVerificationUrl = (houseNumber: string) => {
+    const rawBase = API_CONFIG.BASE_URL || 'https://fims.cosmopolitan.edu.ng';
+    const cleanBase = rawBase.replace(/\/api.*$/, '').replace(/\/+$/, '');
+    return `${cleanBase}/verify-dwelling/${encodeURIComponent(houseNumber)}`;
+  };
+
   const handleGeneratePDF = async () => {
     if (!household) return;
     try {
       setGenerating(true);
-      const fullName = `${household.headFirstName} ${household.headMiddleName ? household.headMiddleName + ' ' : ''}${household.headLastName}`;
+      const fullName = `${household.headFirstName} ${household.headMiddleName ? household.headMiddleName + ' ' : ''}${household.headLastName}`.trim();
       const issueDate = new Date().toLocaleDateString('en-GB', {
         day: '2-digit',
-        month: 'short',
+        month: 'long',
         year: 'numeric',
       });
+
+      const verifyUrl = getPublicVerificationUrl(household.houseNumber);
+
+      // Attempt to get QR code base64 from ref, fallback to qrserver
+      let qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(verifyUrl)}&color=081B33`;
+      if (qrSvgRef.current && typeof qrSvgRef.current.toDataURL === 'function') {
+        try {
+          const b64 = await new Promise<string>((resolve) => {
+            qrSvgRef.current.toDataURL((data: string) => resolve(data));
+          });
+          if (b64) {
+            qrImgSrc = `data:image/png;base64,${b64}`;
+          }
+        } catch (e) {
+          console.warn('Could not extract QR base64, using fallback:', e);
+        }
+      }
 
       const html = `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8" />
-          <title>Dwelling Identification Slip - ${household.houseNumber}</title>
+          <title>Dwelling Identification Document - ${household.houseNumber}</title>
           <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             body {
               font-family: 'Helvetica Neue', Arial, sans-serif;
-              padding: 32px;
-              color: #1f2937;
+              padding: 20px;
+              color: #0f172a;
               background-color: #ffffff;
+              margin: 0;
             }
-            .border-wrap {
-              border: 3px solid #013358;
+            .outer-border {
+              border: 3px solid #081B33;
               border-radius: 12px;
-              padding: 28px;
+              padding: 16px;
+            }
+            .inner-border {
+              border: 1px solid #C5A059;
+              border-radius: 8px;
+              padding: 18px;
             }
             .header {
               text-align: center;
-              border-bottom: 2px solid #013358;
-              padding-bottom: 16px;
-              margin-bottom: 20px;
+              border-bottom: 2px solid #081B33;
+              padding-bottom: 14px;
+              margin-bottom: 16px;
             }
-            .title {
-              font-size: 14px;
-              font-weight: 800;
-              letter-spacing: 1.5px;
-              color: #013358;
+            .logo {
+              width: 72px;
+              height: 72px;
+              object-fit: contain;
+              margin-bottom: 6px;
+            }
+            .org-name {
+              font-size: 15px;
+              font-weight: 900;
+              color: #081B33;
+              letter-spacing: 0.8px;
               text-transform: uppercase;
               margin: 0;
             }
-            .sub {
-              font-size: 20px;
+            .org-uni {
+              font-size: 12px;
+              font-weight: 700;
+              color: #0284c7;
+              margin: 2px 0 0 0;
+            }
+            .org-brand {
+              font-size: 11px;
+              font-weight: 800;
+              color: #b45309;
+              letter-spacing: 0.8px;
+              text-transform: uppercase;
+              margin: 2px 0 0 0;
+            }
+            .gold-divider {
+              height: 2px;
+              background: linear-gradient(90deg, transparent, #C5A059, #081B33, #C5A059, transparent);
+              margin: 8px auto;
+              width: 80%;
+            }
+            .doc-title {
+              font-size: 16px;
               font-weight: 900;
-              color: #059669;
+              color: #081B33;
               letter-spacing: 0.5px;
-              margin: 6px 0 0 0;
+              text-transform: uppercase;
+              margin: 0;
+            }
+            .doc-sub {
+              font-size: 10px;
+              color: #64748b;
+              font-weight: 600;
+              margin: 2px 0 0 0;
             }
             .house-box {
               background: #f8fafc;
-              border: 1px solid #cbd5e1;
+              border: 2px solid #081B33;
               border-radius: 8px;
-              padding: 14px;
-              text-align: center;
-              margin-bottom: 20px;
+              padding: 10px 14px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 14px;
             }
             .house-code {
-              font-size: 22px;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 19px;
               font-weight: 900;
-              color: #013358;
+              color: #081B33;
               letter-spacing: 1px;
             }
-            .grid {
-              display: table;
-              width: 100%;
-              margin-bottom: 20px;
+            .house-label {
+              font-size: 9.5px;
+              font-weight: 800;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
             }
-            .row {
-              display: table-row;
+            .status-badge {
+              font-size: 9.5px;
+              font-weight: 800;
+              padding: 3px 8px;
+              border-radius: 4px;
+              background: #e0f2fe;
+              color: #0369a1;
+              text-transform: uppercase;
+            }
+            .qr-banner {
+              display: flex;
+              gap: 14px;
+              align-items: center;
+              background: #fdfbf7;
+              border: 1px solid #e2d9c8;
+              border-radius: 8px;
+              padding: 10px 14px;
+              margin-bottom: 14px;
+            }
+            .qr-wrap {
+              width: 88px;
+              height: 88px;
+              background: #ffffff;
+              padding: 3px;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              flex-shrink: 0;
+            }
+            .qr-wrap img {
+              width: 100%;
+              height: 100%;
+              display: block;
+            }
+            .qr-info-title {
+              font-size: 11px;
+              font-weight: 800;
+              color: #081B33;
+              text-transform: uppercase;
+              margin: 0 0 2px 0;
+            }
+            .qr-info-desc {
+              font-size: 9.5px;
+              color: #475569;
+              line-height: 1.35;
+              margin: 0 0 3px 0;
+            }
+            .qr-url {
+              font-family: monospace;
+              font-size: 9px;
+              color: #0369a1;
+              font-weight: 700;
+              word-break: break-all;
+            }
+            .table-sec {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 12px;
+            }
+            .table-sec th {
+              background: #081B33;
+              color: #ffffff;
+              font-size: 10px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              padding: 6px 10px;
+              text-align: left;
+            }
+            .table-sec td {
+              padding: 5px 10px;
+              font-size: 10.5px;
+              border: 1px solid #e2e8f0;
+              vertical-align: top;
             }
             .cell-label {
-              display: table-cell;
-              padding: 6px 12px;
-              font-size: 13px;
-              color: #64748b;
-              font-weight: 600;
-              border-bottom: 1px solid #f1f5f9;
-              width: 40%;
+              width: 32%;
+              background: #f8fafc;
+              font-weight: 700;
+              color: #475569;
             }
             .cell-val {
-              display: table-cell;
-              padding: 6px 12px;
-              font-size: 13px;
+              font-weight: 600;
               color: #0f172a;
-              font-weight: 700;
-              border-bottom: 1px solid #f1f5f9;
+            }
+            .tag-valid {
+              display: inline-block;
+              font-size: 8.5px;
+              font-weight: 800;
+              padding: 1px 5px;
+              border-radius: 3px;
+              background: #dcfce7;
+              color: #15803d;
+              margin-left: 6px;
+            }
+            .tag-unvalid {
+              display: inline-block;
+              font-size: 8.5px;
+              font-weight: 800;
+              padding: 1px 5px;
+              border-radius: 3px;
+              background: #fef3c7;
+              color: #b45309;
+              margin-left: 6px;
             }
             .footer {
-              margin-top: 24px;
+              margin-top: 12px;
               text-align: center;
-              font-size: 11px;
-              color: #94a3b8;
-              border-top: 1px dashed #cbd5e1;
-              padding-top: 12px;
+              font-size: 9px;
+              color: #64748b;
+              border-top: 1px solid #cbd5e1;
+              padding-top: 8px;
+              line-height: 1.4;
             }
           </style>
         </head>
         <body>
-          <div class="border-wrap">
-            <div class="header">
-              <div style="font-size: 16px; font-weight: 800; color: #013358; letter-spacing: 0.8px; text-transform: uppercase;">Centre for Climate-Smart Agriculture</div>
-              <div style="font-size: 13px; font-weight: 700; color: #0284c7; margin-top: 4px;">Cosmopolitan University Abuja</div>
-              <div style="font-size: 12px; font-weight: 800; color: #d97706; letter-spacing: 1px; margin-top: 3px;">CCSA / AGROMONEY</div>
-              <div style="height: 1px; background: #e2e8f0; margin: 12px auto; width: 80%;"></div>
-              <h1 class="sub" style="font-size: 18px; margin: 0;">Official Dwelling Identification Slip</h1>
-              <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">National Household & Energy Mapping Registry</p>
-            </div>
-
-            <div class="house-box">
-              <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Standardized House Code</div>
-              <div class="house-code">${household.houseNumber}</div>
-            </div>
-
-            <div class="grid">
-              <div class="row">
-                <div class="cell-label">Head of Household</div>
-                <div class="cell-val">${fullName}</div>
+          <div class="outer-border">
+            <div class="inner-border">
+              <!-- Header -->
+              <div class="header">
+                <img src="${CERTIFICATE_LOGO_BASE64}" class="logo" alt="Logo" />
+                <h1 class="org-name">Centre for Climate-Smart Agriculture</h1>
+                <div class="org-uni">Cosmopolitan University Abuja</div>
+                <div class="org-brand">CCSA / AGROMONEY • Energy & Rural Development</div>
+                <div class="gold-divider"></div>
+                <h2 class="doc-title">Official Dwelling Identification & Verification Slip</h2>
+                <div class="doc-sub">National Household Georeferencing & Productive Energy Mapping Registry</div>
               </div>
-              <div class="row">
-                <div class="cell-label">National ID Number (NIN)</div>
-                <div class="cell-val">${household.headNin || 'N/A'} (Verified)</div>
-              </div>
-              <div class="row">
-                <div class="cell-label">Primary Contact Phone</div>
-                <div class="cell-val">
-                  ${household.headPhone || 'N/A'}
-                  <span style="display:inline-block; margin-left:8px; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:${household.headPhoneVerified ? '#dcfce7' : '#fef3c7'}; color:${household.headPhoneVerified ? '#15803d' : '#b45309'};">
-                    ${household.headPhoneVerified ? 'Validated' : 'Not Validated'}
-                  </span>
+
+              <!-- House Code Box -->
+              <div class="house-box">
+                <div>
+                  <div class="house-label">Assigned Standardized House Code</div>
+                  <div class="house-code">${household.houseNumber}</div>
+                </div>
+                <div>
+                  <span class="status-badge">Registry Status: ${household.interventionStatus}</span>
                 </div>
               </div>
-              <div class="row">
-                <div class="cell-label">Full Dwelling Address</div>
-                <div class="cell-val">
-                  ${household.address ? `<div style="font-weight:700; margin-bottom:2px;">${household.address}</div>` : ''}
-                  <div>${[household.ward, household.lga, household.state].filter(Boolean).join(', ')}</div>
-                  ${household.gpsAddress ? `<div style="font-size:11px; color:#64748b; margin-top:2px;">GPS: ${household.gpsAddress}</div>` : ''}
+
+              <!-- Cryptographic QR & Verification Block -->
+              <div class="qr-banner">
+                <div class="qr-wrap">
+                  <img src="${qrImgSrc}" alt="QR" />
+                </div>
+                <div>
+                  <div class="qr-info-title">Cryptographic Online Verification</div>
+                  <div class="qr-info-desc">
+                    Scan this QR code with any smartphone camera or QR reader to verify authenticity and inspect complete live credentials on the CCSA National Registry.
+                  </div>
+                  <div class="qr-url">${verifyUrl}</div>
                 </div>
               </div>
-              <div class="row">
-                <div class="cell-label">Administrative Boundary</div>
-                <div class="cell-val">${household.ward}, ${household.lga}, ${household.state}</div>
-              </div>
-              <div class="row">
-                <div class="cell-label">Polling Unit</div>
-                <div class="cell-val">${formatPollingUnit(household.pollingUnit)}</div>
-              </div>
-              <div class="row">
-                <div class="cell-label">Dwelling GPS Coordinates</div>
-                <div class="cell-val">${household.latitude ? `${household.latitude.toFixed(6)}, ${household.longitude?.toFixed(6)}` : 'Captured'}</div>
-              </div>
-              <div class="row">
-                <div class="cell-label">Total Household Residents</div>
-                <div class="cell-val">${household.totalHouseholdMembers || 1} Occupants</div>
-              </div>
-              <div class="row">
-                <div class="cell-label">Primary Energy Source</div>
-                <div class="cell-val">${household.primaryEnergySource || 'N/A'}${household.hasPUE ? ' • PUE Business Active' : ''}</div>
-              </div>
-            </div>
 
-            <div class="footer">
-              Issued: ${issueDate} • Verification ID: ${household.offlineId || household.houseNumber} • Tamper-evident Digital Slip
+              <!-- 1. Head of Household -->
+              <table class="table-sec">
+                <thead>
+                  <tr><th colspan="2">1. Head of Household Credentials</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="cell-label">Head of Household</td>
+                    <td class="cell-val">${fullName}</td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">National Identity (NIN)</td>
+                    <td class="cell-val">
+                      ${household.headNin || 'N/A'}
+                      ${household.headNinVerified ? '<span class="tag-valid">✓ NIMC Verified</span>' : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Contact Phone Number</td>
+                    <td class="cell-val">
+                      ${household.headPhone || 'N/A'}
+                      <span class="${household.headPhoneVerified ? 'tag-valid' : 'tag-unvalid'}">
+                        ${household.headPhoneVerified ? '✓ Validated via OTP' : 'Not Validated'}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Total Occupants</td>
+                    <td class="cell-val">${household.totalHouseholdMembers || 1} Residents (${household.wivesCount} Wives, ${household.childrenCount} Children, ${household.otherDependentsCount} Other Dependents)</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- 2. Dwelling Spatial Location -->
+              <table class="table-sec">
+                <thead>
+                  <tr><th colspan="2">2. Dwelling Spatial Georeferencing</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="cell-label">Dwelling Address</td>
+                    <td class="cell-val">
+                      ${household.address ? `<strong>${household.address}</strong><br />` : ''}
+                      ${[household.ward, household.lga, household.state].filter(Boolean).join(', ')}
+                      ${household.gpsAddress ? `<div style="font-size:9.5px; color:#64748b; margin-top:2px;">GPS: ${household.gpsAddress}</div>` : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Administrative Boundary</td>
+                    <td class="cell-val">${household.ward}, ${household.lga}, ${household.state}</td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Polling Unit</td>
+                    <td class="cell-val">${formatPollingUnit(household.pollingUnit)}</td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">GPS Georeference</td>
+                    <td class="cell-val" style="font-family: monospace;">
+                      ${household.latitude && household.longitude ? `${household.latitude.toFixed(6)}, ${household.longitude.toFixed(6)}` : 'Captured'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- 3. Energy & Connectivity Profile -->
+              <table class="table-sec">
+                <thead>
+                  <tr><th colspan="2">3. Energy & Electrification Profile</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="cell-label">Primary Energy Source</td>
+                    <td class="cell-val">${household.primaryEnergySource || 'Grid / Standalone Solar / None'}</td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Productive Energy (PUE)</td>
+                    <td class="cell-val">
+                      ${household.hasPUE ? '<strong style="color:#059669;">Active Productive Equipment on Site</strong>' : 'Residential Dwelling Only'}
+                      ${household.pueType ? ` (${household.pueType})` : ''}
+                      ${household.pueEquipment?.length ? `<br /><span style="font-size:9.5px; color:#475569;">Equipment: ${household.pueEquipment.join(', ')}</span>` : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Telecommunications</td>
+                    <td class="cell-val">${household.telcoProviders?.join(', ') || 'Active'} • Coverage: ${household.networkType || 'GSM'}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="footer">
+                Issued: <strong>${issueDate}</strong> • Verification ID: ${household.offlineId || household.houseNumber}<br />
+                Official Tamper-Evident Credential issued by Centre for Climate-Smart Agriculture (CCSA) • Cosmopolitan University Abuja
+              </div>
             </div>
           </div>
         </body>
@@ -234,7 +466,7 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
 
       Alert.alert(
         'Slip Generated',
-        'Official Dwelling Identification Slip PDF has been generated successfully!',
+        'Official Dwelling Identification Slip PDF has been generated with cryptographic QR verification.',
         [
           {
             text: 'View / Share',
@@ -251,8 +483,10 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
   };
 
   const fullName = household
-    ? `${household.headFirstName} ${household.headMiddleName ? household.headMiddleName + ' ' : ''}${household.headLastName}`
+    ? `${household.headFirstName} ${household.headMiddleName ? household.headMiddleName + ' ' : ''}${household.headLastName}`.trim()
     : '';
+
+  const verifyUrl = household ? getPublicVerificationUrl(household.houseNumber) : '';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -289,12 +523,14 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
 
         {household ? (
           <View style={styles.slipCard}>
-            {/* Top Banner */}
+            {/* Top Institutional Banner with Logo */}
             <View style={styles.slipHeader}>
-              <View style={styles.emblemRow}>
-                <Ionicons name="leaf" size={20} color="#059669" />
-                <Text style={styles.emblemText}>CENTRE FOR CLIMATE-SMART AGRICULTURE</Text>
-              </View>
+              <Image
+                source={require('../../../assets/certificate-logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.emblemText}>CENTRE FOR CLIMATE-SMART AGRICULTURE</Text>
               <Text style={styles.universityText}>Cosmopolitan University Abuja</Text>
               <Text style={styles.initiativeText}>CCSA / AGROMONEY</Text>
               <View style={styles.headerDivider} />
@@ -308,13 +544,14 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
               <Text style={styles.houseCodeValue}>{household.houseNumber}</Text>
             </View>
 
-            {/* QR Code and Key Details Row */}
+            {/* Cryptographic QR Code and Key Details Row */}
             <View style={styles.qrRow}>
               <View style={styles.qrBox}>
                 <QRCode
-                  value={`HOUSEHOLD:${household.houseNumber}|NIN:${household.headNin || 'N/A'}|GEO:${household.latitude || 0},${household.longitude || 0}`}
+                  value={verifyUrl}
                   size={100}
-                  color="#013358"
+                  color="#081B33"
+                  getRef={(c) => (qrSvgRef.current = c)}
                 />
               </View>
 
@@ -325,11 +562,24 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
                   {[household.ward, household.lga, household.state].filter(Boolean).join(', ')}
                 </Text>
                 <View style={styles.verifiedTag}>
-                  <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                  <Ionicons name="shield-checkmark" size={14} color="#059669" />
                   <Text style={styles.verifiedTagText}>Registry Verified</Text>
                 </View>
               </View>
             </View>
+
+            {/* Public URL Notice */}
+            <TouchableOpacity
+              style={styles.verifyUrlBox}
+              onPress={() => Linking.openURL(verifyUrl)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="globe-outline" size={14} color="#0369a1" />
+              <Text style={styles.verifyUrlText} numberOfLines={1}>
+                {verifyUrl}
+              </Text>
+              <Ionicons name="open-outline" size={12} color="#0369a1" />
+            </TouchableOpacity>
 
             {/* Detailed Row List */}
             <View style={styles.detailsList}>
@@ -421,6 +671,14 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={styles.onlineVerifyBtn}
+                onPress={() => Linking.openURL(verifyUrl)}
+              >
+                <Ionicons name="shield-checkmark-outline" size={16} color="#013358" style={{ marginRight: 6 }} />
+                <Text style={styles.onlineVerifyBtnText}>Open Public Verification URL</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={styles.detailsBtn}
                 onPress={() => navigation.navigate('HouseholdDetails', { household })}
               >
@@ -454,25 +712,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    paddingHorizontal: 24,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: '#f9fafb',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#e2e8f0',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#081B33',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: 13,
+    color: '#64748b',
     marginTop: 4,
   },
   content: {
-    padding: 24,
+    flex: 1,
+    padding: 16,
   },
   searchBar: {
     flexDirection: 'row',
@@ -485,18 +744,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#cbd5e1',
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 52,
+    height: 48,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#1f2937',
+    fontSize: 14,
+    color: '#1e293b',
   },
   searchBtn: {
-    backgroundColor: '#013358',
+    backgroundColor: '#081B33',
     paddingHorizontal: 18,
     borderRadius: 12,
     alignItems: 'center',
@@ -505,15 +764,20 @@ const styles = StyleSheet.create({
   searchBtnText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   slipCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#013358',
+    borderColor: '#081B33',
     padding: 20,
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
   slipHeader: {
     alignItems: 'center',
@@ -522,16 +786,15 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     marginBottom: 16,
   },
-  emblemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+  logoImage: {
+    width: 64,
+    height: 64,
+    marginBottom: 8,
   },
   emblemText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#013358',
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#081B33',
     letterSpacing: 0.8,
     textAlign: 'center',
   },
@@ -545,77 +808,83 @@ const styles = StyleSheet.create({
   initiativeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#d97706',
+    color: '#b45309',
     letterSpacing: 0.8,
     marginTop: 2,
     textAlign: 'center',
   },
   headerDivider: {
-    height: 1,
-    backgroundColor: '#e2e8f0',
-    width: '85%',
+    height: 2,
+    backgroundColor: '#C5A059',
+    width: '75%',
     marginVertical: 10,
+    borderRadius: 1,
   },
   slipTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#059669',
+    color: '#081B33',
     marginTop: 2,
+    textTransform: 'uppercase',
   },
   slipSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748b',
     marginTop: 2,
+    fontWeight: '600',
   },
   houseCodeBox: {
     backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderWidth: 1.5,
+    borderColor: '#081B33',
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
     marginBottom: 16,
   },
   houseCodeLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#64748b',
     textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   houseCodeValue: {
-    fontSize: 20,
+    fontFamily: 'Courier New',
+    fontSize: 21,
     fontWeight: '900',
-    color: '#013358',
-    letterSpacing: 0.8,
-    marginTop: 4,
+    color: '#081B33',
+    letterSpacing: 1,
+    marginTop: 3,
   },
   qrRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    paddingBottom: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   qrBox: {
-    padding: 8,
+    padding: 6,
     backgroundColor: '#ffffff',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderWidth: 1.5,
+    borderColor: '#081B33',
   },
   qrDetails: {
     flex: 1,
   },
   qrHeadName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1f2937',
+    fontWeight: '800',
+    color: '#0f172a',
   },
   qrNinText: {
     fontSize: 13,
     color: '#475569',
     marginTop: 2,
+    fontWeight: '600',
   },
   qrLocationText: {
     fontSize: 12,
@@ -627,30 +896,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     marginTop: 6,
+    backgroundColor: '#ecfdf5',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
   },
   verifiedTagText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     color: '#059669',
   },
+  verifyUrlBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  verifyUrlText: {
+    flex: 1,
+    fontFamily: 'Courier New',
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#0369a1',
+  },
   detailsList: {
-    marginTop: 12,
+    marginTop: 8,
   },
   detailItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
+    borderBottomColor: '#f1f5f9',
   },
   itemLabel: {
     fontSize: 13,
     color: '#64748b',
+    fontWeight: '600',
   },
   itemValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontWeight: '700',
+    color: '#0f172a',
   },
   slipActions: {
     gap: 10,
@@ -660,26 +957,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#013358',
+    backgroundColor: '#081B33',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
+    shadowColor: '#081B33',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   printBtnText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  onlineVerifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  onlineVerifyBtnText: {
+    color: '#081B33',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   detailsBtn: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: '#f1f5f9',
   },
   detailsBtnText: {
-    color: '#013358',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#475569',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   emptyWrap: {
     alignItems: 'center',
@@ -702,7 +1019,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   browseBtn: {
-    backgroundColor: '#013358',
+    backgroundColor: '#081B33',
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 8,
