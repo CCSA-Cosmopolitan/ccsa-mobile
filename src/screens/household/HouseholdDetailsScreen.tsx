@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { HouseholdRecord, householdService } from '../../services/householdService';
+import { formatPollingUnit } from '../../utils/textUtils';
 
 interface InfoRowProps {
   label: string;
@@ -194,7 +195,7 @@ export default function HouseholdDetailsScreen({ route, navigation }: { route: a
             <InfoRow label="State" value={currentRecord.state} />
             <InfoRow label="Local Government (LGA)" value={currentRecord.lga} />
             <InfoRow label="Ward" value={currentRecord.ward} />
-            <InfoRow label="Polling Unit (PU)" value={currentRecord.pollingUnit} />
+            <InfoRow label="Polling Unit (PU)" value={formatPollingUnit(currentRecord.pollingUnit)} />
             <InfoRow label="Street / Landmark" value={currentRecord.address} />
             {currentRecord.latitude && currentRecord.longitude && (
               <InfoRow

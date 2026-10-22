@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { generateHouseNumber } from '../../utils/houseNumberGenerator';
+import { formatPollingUnit } from '../../utils/textUtils';
 import { householdService } from '../../services/householdService';
 import { ninService } from '../../services/ninService';
 import { lazyLocationService } from '../../services/lazyLocationService';
@@ -529,7 +530,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
         state,
         lga,
         ward,
-        pollingUnit,
+        pollingUnit: formatPollingUnit(pollingUnit),
         address: address.trim() || undefined,
         latitude,
         longitude,

@@ -242,9 +242,9 @@ class LazyLocationService {
       // Transform to expected format
       const transformedPollingUnits = pollingUnitsData.map((unit, index) => ({
         id: unit,
-        name: this.formatName(unit),
+        name: this.formatPollingUnit(unit),
         value: unit,
-        label: this.formatName(unit),
+        label: this.formatPollingUnit(unit),
         wardId
       }));
       
@@ -375,6 +375,16 @@ class LazyLocationService {
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  }
+
+  // Format polling unit in sentence case without hyphens
+  formatPollingUnit(text) {
+    if (!text) return 'N/A';
+    const cleaned = text.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleaned) return 'N/A';
+    let result = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+    result = result.replace(/\b(i{1,3}|iv|v|vi{1,3}|ix|x)\b/gi, (m) => m.toUpperCase());
+    return result;
   }
 
   // Get location statistics

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { householdService, HouseholdRecord } from '../../services/householdService';
+import { formatPollingUnit } from '../../utils/textUtils';
 
 export default function HouseholdListScreen({ navigation }: { navigation: any }) {
   const [households, setHouseholds] = useState<HouseholdRecord[]>([]);
@@ -231,7 +232,7 @@ export default function HouseholdListScreen({ navigation }: { navigation: any })
                 <View style={styles.detailRow}>
                   <Ionicons name="location-outline" size={14} color="#64748b" />
                   <Text style={styles.detailText}>
-                    {[item.ward, item.lga, item.state].filter(Boolean).join(', ')} • PU: {item.pollingUnit}
+                    {[item.ward, item.lga, item.state].filter(Boolean).join(', ')} • PU: {formatPollingUnit(item.pollingUnit)}
                   </Text>
                 </View>
 

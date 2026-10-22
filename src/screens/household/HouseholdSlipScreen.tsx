@@ -15,6 +15,7 @@ import QRCode from 'react-native-qrcode-svg';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { HouseholdRecord, householdService } from '../../services/householdService';
+import { formatPollingUnit } from '../../utils/textUtils';
 
 export default function HouseholdSlipScreen({ route, navigation }: { route: any; navigation: any }) {
   const [query, setQuery] = useState('');
@@ -204,8 +205,8 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
                 <div class="cell-val">${household.ward}, ${household.lga}, ${household.state}</div>
               </div>
               <div class="row">
-                <div class="cell-label">Polling Unit Code</div>
-                <div class="cell-val">${household.pollingUnit || 'N/A'}</div>
+                <div class="cell-label">Polling Unit</div>
+                <div class="cell-val">${formatPollingUnit(household.pollingUnit)}</div>
               </div>
               <div class="row">
                 <div class="cell-label">Dwelling GPS Coordinates</div>
@@ -376,7 +377,7 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
 
               <View style={styles.detailItem}>
                 <Text style={styles.itemLabel}>Polling Unit</Text>
-                <Text style={styles.itemValue}>{household.pollingUnit || 'N/A'}</Text>
+                <Text style={styles.itemValue}>{formatPollingUnit(household.pollingUnit)}</Text>
               </View>
 
               {household.latitude && household.longitude && (
