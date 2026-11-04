@@ -78,12 +78,50 @@ const ENERGY_SOURCES = [
   { label: 'None / Biomass / Kerosene', value: 'None' },
 ];
 
+const WATER_SOURCES = [
+  { label: 'Borehole (Solar / Motorized)', value: 'Borehole' },
+  { label: 'Protected Hand Pump', value: 'Hand Pump' },
+  { label: 'Hand-dug Well', value: 'Well' },
+  { label: 'Public Tap / Piped Water', value: 'Public Tap' },
+  { label: 'Water Vendor / Tanker / Cart', value: 'Water Vendor' },
+  { label: 'Stream / River / Rainwater', value: 'Surface Water' },
+  { label: 'Sachet / Bottled Water', value: 'Bottled Water' },
+  { label: 'None / Other', value: 'Other' },
+];
+
+const HOUSE_TYPE_OPTIONS = [
+  { label: 'Duplex', value: 'Duplex' },
+  { label: 'Two Bedroom Flat', value: 'Two Bedroom Flat' },
+  { label: 'Three+ Bedroom Flat', value: 'Three+ Bedroom Flat' },
+  { label: 'Bungalow', value: 'Bungalow' },
+  { label: 'Terrace / Townhouse', value: 'Terrace' },
+  { label: 'Compound / Face-Me-I-Face-You', value: 'Compound' },
+  { label: 'Single Room / Self-Contain', value: 'Single Room' },
+  { label: 'Traditional / Mud & Thatch House', value: 'Traditional Mud' },
+  { label: 'Other', value: 'Other' },
+];
+
+const COMMON_OCCUPATIONS = [
+  'Crop Farmer',
+  'Livestock Farmer',
+  'Fisherman',
+  'Trader / Merchant',
+  'Civil Servant',
+  'Teacher',
+  'Artisan / Technician',
+  'Transport Operator',
+  'Business Owner',
+  'Student',
+  'Retired',
+  'Homemaker',
+];
+
 const STEPS = [
   { id: 1, title: 'NIN Verification' },
   { id: 2, title: 'Personal Details' },
-  { id: 3, title: 'Location' },
-  { id: 4, title: 'Family Members' },
-  { id: 5, title: 'Connectivity & Energy' },
+  { id: 3, title: 'Location & Dwelling' },
+  { id: 4, title: 'Family & Livestock' },
+  { id: 5, title: 'Utilities & Energy' },
 ];
 
 const MIN_AGE = 18;
@@ -153,6 +191,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
   const [headDateOfBirth, setHeadDateOfBirth] = useState('');
   const [headMaritalStatus, setHeadMaritalStatus] = useState('MARRIED');
   const [headEmployment, setHeadEmployment] = useState('');
+  const [headOccupation, setHeadOccupation] = useState('');
   const [headEducation, setHeadEducation] = useState('');
   const [headPhotoUrl, setHeadPhotoUrl] = useState<string | null>(null);
 
@@ -173,14 +212,24 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
   const [houseNumber, setHouseNumber] = useState('');
   const houseSeq = useRef<number>(Math.floor(1 + Math.random() * 998));
   const [houseFrontPhoto, setHouseFrontPhoto] = useState<string | null>(null);
+  const [houseType, setHouseType] = useState('Bungalow');
+  const [customHouseType, setCustomHouseType] = useState('');
 
-  // ── Step 4: Family ──
+  // ── Step 4: Family & Livestock ──
   const [wivesCount, setWivesCount] = useState('0');
   const [childrenCount, setChildrenCount] = useState('0');
   const [otherDependentsCount, setOtherDependentsCount] = useState('0');
-  const [dependentsNotes, setDependentsNotes] = useState('');
+  const [hasLivestock, setHasLivestock] = useState(false);
+  const [cattleCount, setCattleCount] = useState('0');
+  const [horsesCount, setHorsesCount] = useState('0');
+  const [sheepCount, setSheepCount] = useState('0');
+  const [goatsCount, setGoatsCount] = useState('0');
+  const [poultryCount, setPoultryCount] = useState('0');
+  const [donkeysCount, setDonkeysCount] = useState('0');
+  const [otherAnimalsCount, setOtherAnimalsCount] = useState('0');
+  const [livestockNotes, setLivestockNotes] = useState('');
 
-  // ── Step 5: Connectivity & Energy ──
+  // ── Step 5: Utilities & Energy ──
   const [telcoProviders, setTelcoProviders] = useState<string[]>(['MTN']);
   const [networkType, setNetworkType] = useState('4G');
   const [commercialCustomers, setCommercialCustomers] = useState('0');
@@ -188,8 +237,18 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
   const [pueType, setPueType] = useState('Milling');
   const [pueEquipment, setPueEquipment] = useState('');
   const [primaryEnergySource, setPrimaryEnergySource] = useState('Solar Mini-Grid');
+  const [waterSource, setWaterSource] = useState('Borehole');
 
   const [saving, setSaving] = useState(false);
+
+  const calculatedTotalAnimals =
+    (parseInt(cattleCount, 10) || 0) +
+    (parseInt(horsesCount, 10) || 0) +
+    (parseInt(sheepCount, 10) || 0) +
+    (parseInt(goatsCount, 10) || 0) +
+    (parseInt(poultryCount, 10) || 0) +
+    (parseInt(donkeysCount, 10) || 0) +
+    (parseInt(otherAnimalsCount, 10) || 0);
 
   const gpsCaptured = latitude !== null && longitude !== null;
   const age = calcAge(headDateOfBirth);
@@ -324,29 +383,6 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
     setNinData(null);
   };
 
-  const handleCaptureHeadPhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Camera Permission Required', 'Please enable camera access to capture the head of household.');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        cameraType: ImagePicker.CameraType.front,
-        quality: 0.5,
-        base64: true,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
-      if (!result.canceled && result.assets?.[0]) {
-        const asset = result.assets[0];
-        setHeadPhotoUrl(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
-      }
-    } catch (e: any) {
-      Alert.alert('Camera Error', e.message || 'Could not take photo');
-    }
-  };
-
   const handleCaptureHouseFront = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -450,10 +486,6 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
         Alert.alert('Email', 'Please enter a valid email address or leave it blank.');
         return false;
       }
-      if (!headPhotoUrl) {
-        Alert.alert('Photo Required', 'Take a current photo of the head of household.');
-        return false;
-      }
     } else if (step === 3) {
       if (!gpsCaptured) {
         Alert.alert('Location Required', 'Capture the dwelling GPS location before continuing.');
@@ -490,6 +522,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
     setHeadEmail('');
     setHeadDateOfBirth('');
     setHeadEmployment('');
+    setHeadOccupation('');
     setHeadEducation('');
     setHeadPhotoUrl(null);
     setLatitude(null);
@@ -506,10 +539,21 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
     setAddress('');
     setHouseNumber('');
     setHouseFrontPhoto(null);
+    setHouseType('Bungalow');
+    setCustomHouseType('');
     setWivesCount('0');
     setChildrenCount('0');
     setOtherDependentsCount('0');
-    setDependentsNotes('');
+    setHasLivestock(false);
+    setCattleCount('0');
+    setHorsesCount('0');
+    setSheepCount('0');
+    setGoatsCount('0');
+    setPoultryCount('0');
+    setDonkeysCount('0');
+    setOtherAnimalsCount('0');
+    setLivestockNotes('');
+    setWaterSource('Borehole');
     setHasPue(false);
     setPueEquipment('');
     setCurrentStep(1);
@@ -525,6 +569,9 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
 
     try {
       setSaving(true);
+      const effectiveHouseType =
+        houseType === 'Other' && customHouseType.trim() ? customHouseType.trim() : houseType;
+
       await householdService.saveHouseholdOffline({
         houseNumber,
         state,
@@ -538,6 +585,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
         gpsAddress: gpsAddress || undefined,
         locationCapturedAt,
         houseFrontPhotoUrl: houseFrontPhoto,
+        houseType: effectiveHouseType,
         headFirstName: headFirstName.trim(),
         headMiddleName: headMiddleName.trim() || undefined,
         headLastName: headLastName.trim(),
@@ -548,6 +596,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
         headDateOfBirth: headDateOfBirth || undefined,
         headMaritalStatus,
         headEmploymentStatus: headEmployment || undefined,
+        headOccupation: headOccupation.trim() || undefined,
         headEducationLevel: headEducation || undefined,
         headStateOfOrigin: ninData?.birthState || ninData?.state || undefined,
         headLgaOfOrigin: ninData?.birthLga || ninData?.lga || undefined,
@@ -559,7 +608,16 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
         childrenCount: parseInt(childrenCount, 10) || 0,
         otherDependentsCount: parseInt(otherDependentsCount, 10) || 0,
         totalHouseholdMembers: calculatedTotalMembers,
-        dependentsNotes: dependentsNotes.trim() || undefined,
+        hasLivestock,
+        cattleCount: parseInt(cattleCount, 10) || 0,
+        horsesCount: parseInt(horsesCount, 10) || 0,
+        sheepCount: parseInt(sheepCount, 10) || 0,
+        goatsCount: parseInt(goatsCount, 10) || 0,
+        poultryCount: parseInt(poultryCount, 10) || 0,
+        donkeysCount: parseInt(donkeysCount, 10) || 0,
+        otherAnimalsCount: parseInt(otherAnimalsCount, 10) || 0,
+        livestockNotes: livestockNotes.trim() || undefined,
+        totalAnimalsCount: calculatedTotalAnimals,
         telcoProviders,
         networkType,
         commercialCustomersCount: parseInt(commercialCustomers, 10) || 0,
@@ -567,6 +625,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
         pueType: hasPue ? pueType : undefined,
         pueEquipment: pueEquipment.trim() ? pueEquipment.split(',').map((s) => s.trim()) : [],
         primaryEnergySource,
+        waterSource,
         interventionStatus: 'Captured',
       });
 
@@ -721,26 +780,8 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
               {renderStepHeader(
                 'person-outline',
                 'Personal Details',
-                'Confirm the verified details and take a current photo of the head of household.'
+                'Confirm the verified details of the head of household.'
               )}
-
-              {/* Live photo */}
-              <View style={styles.photoSection}>
-                <TouchableOpacity style={styles.avatarWrap} onPress={handleCaptureHeadPhoto} activeOpacity={0.8}>
-                  {headPhotoUrl ? (
-                    <Image source={{ uri: headPhotoUrl }} style={styles.avatar} />
-                  ) : (
-                    <View style={[styles.avatar, styles.avatarEmpty]}>
-                      <Ionicons name="camera-outline" size={34} color="#9ca3af" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleCaptureHeadPhoto} style={styles.linkBtn}>
-                  <Ionicons name="camera" size={16} color="#013358" />
-                  <Text style={styles.linkBtnText}>{headPhotoUrl ? 'Retake photo' : 'Take current photo *'}</Text>
-                </TouchableOpacity>
-                <Text style={styles.fieldHint}>Face the camera in good light. The NIMC photo is not used.</Text>
-              </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>First Name *</Text>
@@ -837,6 +878,43 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
                   onValueChange={(val: any) => setHeadEmployment(val)}
                   placeholder="Select employment status"
                 />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Major Occupation</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="briefcase-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Crop Farmer, Trader, Civil Servant"
+                    placeholderTextColor="#9ca3af"
+                    value={headOccupation}
+                    onChangeText={setHeadOccupation}
+                  />
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', paddingVertical: 2 }}>
+                    {COMMON_OCCUPATIONS.map((occ) => {
+                      const selected = headOccupation.toLowerCase() === occ.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={occ}
+                          onPress={() => setHeadOccupation(occ)}
+                          style={[
+                            styles.chip,
+                            selected && styles.chipSelected,
+                            { paddingHorizontal: 10, paddingVertical: 6, marginRight: 6 }
+                          ]}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.chipText, selected && styles.chipTextSelected, { fontSize: 12 }]}>
+                            {occ}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
               </View>
 
               <View style={styles.inputGroup}>
@@ -1052,6 +1130,28 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
                   </View>
 
                   <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Type of House / Dwelling *</Text>
+                    <CustomSelect
+                      options={HOUSE_TYPE_OPTIONS as any}
+                      selectedValue={houseType}
+                      onValueChange={(val: string) => setHouseType(val)}
+                      placeholder="Select house type"
+                    />
+                    {houseType === 'Other' && (
+                      <View style={[styles.inputContainer, { marginTop: 8 }]}>
+                        <Ionicons name="home-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Specify dwelling type"
+                          placeholderTextColor="#9ca3af"
+                          value={customHouseType}
+                          onChangeText={setCustomHouseType}
+                        />
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.inputGroup}>
                     <Text style={styles.label}>Dwelling Front Photograph</Text>
                     {houseFrontPhoto ? (
                       <View>
@@ -1100,7 +1200,7 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
               </View>
 
               {[
-                { label: 'Number of Spouses', icon: 'heart-outline', value: wivesCount, set: setWivesCount },
+                { label: 'Number of Wives', icon: 'heart-outline', value: wivesCount, set: setWivesCount },
                 { label: 'Number of Children', icon: 'happy-outline', value: childrenCount, set: setChildrenCount },
                 {
                   label: 'Other Dependents',
@@ -1125,19 +1225,107 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
                 </View>
               ))}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Welfare Notes</Text>
-                <View style={[styles.inputContainer, { alignItems: 'flex-start' }]}>
-                  <TextInput
-                    style={[styles.input, { minHeight: 80, paddingTop: 12 }]}
-                    placeholder="Persons with disabilities, elderly dependents, etc. (optional)"
-                    placeholderTextColor="#9ca3af"
-                    value={dependentsNotes}
-                    onChangeText={setDependentsNotes}
-                    multiline
-                    textAlignVertical="top"
-                  />
+              {/* Livestock & Domestic Animals */}
+              <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <Ionicons name="paw-outline" size={20} color="#013358" style={{ marginRight: 8 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>Livestock & Domestic Animals</Text>
+                    <Text style={{ fontSize: 12, color: '#6b7280' }}>Record domestic animals owned or kept by the household.</Text>
+                  </View>
                 </View>
+
+                {/* Yes / No Toggle for Livestock */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Does this household keep or own animals?</Text>
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.chip,
+                        hasLivestock && styles.chipSelected,
+                        { flex: 1, alignItems: 'center', paddingVertical: 10 }
+                      ]}
+                      onPress={() => setHasLivestock(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.chipText, hasLivestock && styles.chipTextSelected, { fontWeight: '600' }]}>
+                        Yes, has animals
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.chip,
+                        !hasLivestock && styles.chipSelected,
+                        { flex: 1, alignItems: 'center', paddingVertical: 10 }
+                      ]}
+                      onPress={() => {
+                        setHasLivestock(false);
+                        setCattleCount('0');
+                        setHorsesCount('0');
+                        setSheepCount('0');
+                        setGoatsCount('0');
+                        setPoultryCount('0');
+                        setDonkeysCount('0');
+                        setOtherAnimalsCount('0');
+                        setLivestockNotes('');
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.chipText, !hasLivestock && styles.chipTextSelected, { fontWeight: '600' }]}>
+                        No animals
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {hasLivestock && (
+                  <View style={{ marginTop: 8 }}>
+                    {/* Total animals badge */}
+                    <View style={[styles.totalRow, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }]}>
+                      <Text style={[styles.totalNumber, { color: '#15803d' }]}>{calculatedTotalAnimals}</Text>
+                      <Text style={[styles.totalLabel, { color: '#166534' }]}>total domestic animals recorded</Text>
+                    </View>
+
+                    {[
+                      { label: 'Cattle (Cows, Bulls, Calves)', icon: 'paw-outline', value: cattleCount, set: setCattleCount },
+                      { label: 'Horses', icon: 'speedometer-outline', value: horsesCount, set: setHorsesCount },
+                      { label: 'Sheep', icon: 'paw-outline', value: sheepCount, set: setSheepCount },
+                      { label: 'Goats (Small Ruminants)', icon: 'paw-outline', value: goatsCount, set: setGoatsCount },
+                      { label: 'Poultry (Chickens, Ducks, Turkeys)', icon: 'egg-outline', value: poultryCount, set: setPoultryCount },
+                      { label: 'Donkeys / Camels', icon: 'paw-outline', value: donkeysCount, set: setDonkeysCount },
+                      { label: 'Other Domestic Animals', icon: 'add-circle-outline', value: otherAnimalsCount, set: setOtherAnimalsCount },
+                    ].map((animal) => (
+                      <View key={animal.label} style={styles.inputGroup}>
+                        <Text style={styles.label}>{animal.label}</Text>
+                        <View style={styles.inputContainer}>
+                          <Ionicons name={animal.icon as any} size={20} color="#9ca3af" style={styles.inputIcon} />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="0"
+                            placeholderTextColor="#9ca3af"
+                            value={animal.value}
+                            onChangeText={(v) => animal.set(v.replace(/\D/g, ''))}
+                            keyboardType="numeric"
+                          />
+                        </View>
+                      </View>
+                    ))}
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Other Animal Details / Notes (Optional)</Text>
+                      <View style={styles.inputContainer}>
+                        <Ionicons name="document-text-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="e.g. 5 Ducks, 2 Camels, mixed local breeds"
+                          placeholderTextColor="#9ca3af"
+                          value={livestockNotes}
+                          onChangeText={setLivestockNotes}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -1147,8 +1335,8 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
             <View style={styles.stepContainer}>
               {renderStepHeader(
                 'flash-outline',
-                'Connectivity & Energy',
-                'Record network coverage, energy source and any productive use of energy.'
+                'Utilities, Connectivity & Energy',
+                'Record network coverage, electricity source, primary water source and productive energy.'
               )}
 
               <View style={styles.inputGroup}>
@@ -1190,12 +1378,22 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Primary Energy Source</Text>
+                <Text style={styles.label}>Primary Energy / Electricity Source</Text>
                 <CustomSelect
                   options={ENERGY_SOURCES as any}
                   selectedValue={primaryEnergySource}
                   onValueChange={setPrimaryEnergySource}
                   placeholder="Select energy source"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Primary Water Source *</Text>
+                <CustomSelect
+                  options={WATER_SOURCES as any}
+                  selectedValue={waterSource}
+                  onValueChange={setWaterSource}
+                  placeholder="Select source of water"
                 />
               </View>
 
@@ -1259,7 +1457,13 @@ export default function HouseholdCaptureScreen({ navigation }: { navigation: any
               <Text style={styles.sectionTitle}>Review</Text>
               <View style={styles.infoCard}>
                 <View style={styles.reviewHead}>
-                  {headPhotoUrl ? <Image source={{ uri: headPhotoUrl }} style={styles.reviewAvatar} /> : null}
+                  {headPhotoUrl ? (
+                    <Image source={{ uri: headPhotoUrl }} style={styles.reviewAvatar} />
+                  ) : (
+                    <View style={[styles.reviewAvatar, { backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' }]}>
+                      <Ionicons name="person" size={26} color="#64748b" />
+                    </View>
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.reviewName}>{fullName}</Text>
                     <Text style={styles.reviewSub}>

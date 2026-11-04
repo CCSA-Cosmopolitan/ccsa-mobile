@@ -192,6 +192,7 @@ export default function HouseholdDetailsScreen({ route, navigation }: { route: a
           <Text style={styles.sectionTitle}>Dwelling Location & Boundary</Text>
           <View style={styles.infoCard}>
             <InfoRow label="Assigned House Code" value={currentRecord.houseNumber} highlight />
+            <InfoRow label="Dwelling / House Type" value={currentRecord.houseType} />
             <InfoRow label="State" value={currentRecord.state} />
             <InfoRow label="Local Government (LGA)" value={currentRecord.lga} />
             <InfoRow label="Ward" value={currentRecord.ward} />
@@ -234,6 +235,7 @@ export default function HouseholdDetailsScreen({ route, navigation }: { route: a
             <InfoRow label="Gender" value={currentRecord.headGender} />
             <InfoRow label="Marital Status" value={currentRecord.headMaritalStatus} />
             <InfoRow label="Employment Status" value={currentRecord.headEmploymentStatus} />
+            <InfoRow label="Major Occupation" value={currentRecord.headOccupation} highlight />
             <InfoRow label="Education Level" value={currentRecord.headEducationLevel} />
             <InfoRow
               label="Phone Number"
@@ -248,9 +250,9 @@ export default function HouseholdDetailsScreen({ route, navigation }: { route: a
           </View>
         </View>
 
-        {/* ── Section 4: Family Members & Occupants ── */}
+        {/* ── Section 4: Family Members & Livestock ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Family Members & Occupants</Text>
+          <Text style={styles.sectionTitle}>Family Members & Livestock</Text>
           <View style={styles.infoCard}>
             <InfoRow
               label="Total Household Occupants"
@@ -260,13 +262,54 @@ export default function HouseholdDetailsScreen({ route, navigation }: { route: a
             <InfoRow label="Spouses / Wives" value={currentRecord.wivesCount || 0} />
             <InfoRow label="Biological Children" value={currentRecord.childrenCount || 0} />
             <InfoRow label="Other Dependents / Relatives" value={currentRecord.otherDependentsCount || 0} />
-            <InfoRow label="Vulnerability / Welfare Notes" value={currentRecord.dependentsNotes} />
+            {Boolean(currentRecord.dependentsNotes) && (
+              <InfoRow label="Welfare Notes" value={currentRecord.dependentsNotes} />
+            )}
+
+            {/* Livestock breakdown */}
+            <InfoRow
+              label="Domestic Animals & Livestock"
+              value={
+                currentRecord.hasLivestock
+                  ? `${currentRecord.totalAnimalsCount || 0} animals recorded`
+                  : 'No animals kept'
+              }
+              highlight={Boolean(currentRecord.hasLivestock)}
+            />
+            {currentRecord.hasLivestock && (
+              <>
+                {Boolean(currentRecord.cattleCount) && (
+                  <InfoRow label="• Cattle" value={`${currentRecord.cattleCount} heads`} />
+                )}
+                {Boolean(currentRecord.horsesCount) && (
+                  <InfoRow label="• Horses" value={`${currentRecord.horsesCount} horses`} />
+                )}
+                {Boolean(currentRecord.sheepCount) && (
+                  <InfoRow label="• Sheep" value={`${currentRecord.sheepCount} sheep`} />
+                )}
+                {Boolean(currentRecord.goatsCount) && (
+                  <InfoRow label="• Goats / Small Ruminants" value={`${currentRecord.goatsCount} goats`} />
+                )}
+                {Boolean(currentRecord.poultryCount) && (
+                  <InfoRow label="• Poultry / Birds" value={`${currentRecord.poultryCount} birds`} />
+                )}
+                {Boolean(currentRecord.donkeysCount) && (
+                  <InfoRow label="• Donkeys / Camels" value={`${currentRecord.donkeysCount} donkeys/camels`} />
+                )}
+                {Boolean(currentRecord.otherAnimalsCount) && (
+                  <InfoRow label="• Other Animals" value={`${currentRecord.otherAnimalsCount}`} />
+                )}
+                {Boolean(currentRecord.livestockNotes) && (
+                  <InfoRow label="• Animal Notes" value={currentRecord.livestockNotes} />
+                )}
+              </>
+            )}
           </View>
         </View>
 
-        {/* ── Section 5: Connectivity & Energy Source ── */}
+        {/* ── Section 5: Utilities, Connectivity & Energy Source ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Connectivity & Productive Energy</Text>
+          <Text style={styles.sectionTitle}>Utilities, Connectivity & Energy</Text>
           <View style={styles.infoCard}>
             <InfoRow
               label="Available Telecom Networks"
@@ -274,6 +317,7 @@ export default function HouseholdDetailsScreen({ route, navigation }: { route: a
             />
             <InfoRow label="Dominant Data Reception" value={currentRecord.networkType || 'N/A'} />
             <InfoRow label="Primary Electricity Source" value={currentRecord.primaryEnergySource} highlight />
+            <InfoRow label="Primary Water Source" value={currentRecord.waterSource} highlight />
             <InfoRow
               label="Productive Use of Energy (PUE)"
               value={currentRecord.hasPUE ? `Yes • ${currentRecord.pueType || 'Commercial'}` : 'No'}

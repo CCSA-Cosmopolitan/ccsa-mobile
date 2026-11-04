@@ -389,9 +389,30 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
                       </span>
                     </td>
                   </tr>
+                  ${household.headOccupation ? `
+                  <tr>
+                    <td class="cell-label">Major Occupation</td>
+                    <td class="cell-val"><strong>${household.headOccupation}</strong></td>
+                  </tr>` : ''}
                   <tr>
                     <td class="cell-label">Total Occupants</td>
                     <td class="cell-val">${household.totalHouseholdMembers || 1} Residents (${household.wivesCount} Wives, ${household.childrenCount} Children, ${household.otherDependentsCount} Other Dependents)</td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Domestic Animals / Livestock</td>
+                    <td class="cell-val">
+                      ${household.hasLivestock
+                        ? `<strong>${household.totalAnimalsCount || 0} Animals</strong> (${[
+                            household.cattleCount ? `${household.cattleCount} Cattle` : '',
+                            household.horsesCount ? `${household.horsesCount} Horses` : '',
+                            household.sheepCount ? `${household.sheepCount} Sheep` : '',
+                            household.goatsCount ? `${household.goatsCount} Goats` : '',
+                            household.poultryCount ? `${household.poultryCount} Poultry` : '',
+                            household.donkeysCount ? `${household.donkeysCount} Donkeys` : '',
+                            household.otherAnimalsCount ? `${household.otherAnimalsCount} Other` : '',
+                          ].filter(Boolean).join(', ')})`
+                        : 'None reported'}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -402,6 +423,11 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
                   <tr><th colspan="2">2. Dwelling Spatial Georeferencing</th></tr>
                 </thead>
                 <tbody>
+                  ${household.houseType ? `
+                  <tr>
+                    <td class="cell-label">Dwelling Type</td>
+                    <td class="cell-val"><strong>${household.houseType}</strong></td>
+                  </tr>` : ''}
                   <tr>
                     <td class="cell-label">Dwelling Address</td>
                     <td class="cell-val">
@@ -430,12 +456,16 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
               <!-- 3. Energy & Connectivity Profile -->
               <table class="table-sec">
                 <thead>
-                  <tr><th colspan="2">3. Energy & Electrification Profile</th></tr>
+                  <tr><th colspan="2">3. Utilities, Energy & Connectivity Profile</th></tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td class="cell-label">Primary Energy Source</td>
+                    <td class="cell-label">Primary Electricity Source</td>
                     <td class="cell-val">${household.primaryEnergySource || 'Grid / Standalone Solar / None'}</td>
+                  </tr>
+                  <tr>
+                    <td class="cell-label">Primary Water Source</td>
+                    <td class="cell-val">${household.waterSource || 'Borehole / Hand Pump / Well'}</td>
                   </tr>
                   <tr>
                     <td class="cell-label">Productive Energy (PUE)</td>
@@ -639,9 +669,35 @@ export default function HouseholdSlipScreen({ route, navigation }: { route: any;
                 </View>
               )}
 
+              {household.houseType && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.itemLabel}>Dwelling Type</Text>
+                  <Text style={styles.itemValue}>{household.houseType}</Text>
+                </View>
+              )}
+
+              {household.headOccupation && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.itemLabel}>Major Occupation</Text>
+                  <Text style={styles.itemValue}>{household.headOccupation}</Text>
+                </View>
+              )}
+
               <View style={styles.detailItem}>
                 <Text style={styles.itemLabel}>Total Residents</Text>
                 <Text style={styles.itemValue}>{household.totalHouseholdMembers || 1} Persons</Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Text style={styles.itemLabel}>Livestock Owned</Text>
+                <Text style={styles.itemValue}>
+                  {household.hasLivestock ? `${household.totalAnimalsCount || 0} Animals` : 'None'}
+                </Text>
+              </View>
+
+              <View style={styles.detailItem}>
+                <Text style={styles.itemLabel}>Water Source</Text>
+                <Text style={styles.itemValue}>{household.waterSource || 'Borehole / Well'}</Text>
               </View>
 
               <View style={[styles.detailItem, { borderBottomWidth: 0 }]}>

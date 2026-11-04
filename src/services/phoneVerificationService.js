@@ -341,7 +341,7 @@ class PhoneVerificationService {
   isValidNigerianPhoneNumber(phoneNumber) {
     const formatted = this.formatPhoneNumber(phoneNumber);
     // Nigerian numbers: +234 followed by 10 digits starting with 7, 8, or 9
-    const nigerianPhoneRegex = /^\+234[789][01]\d{8}$/;
+    const nigerianPhoneRegex = /^\+234[789]\d{9}$/;
     return nigerianPhoneRegex.test(formatted);
   }
 

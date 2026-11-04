@@ -21,6 +21,7 @@ export interface HouseholdRecord {
   longitude?: number | null;
   accuracy?: number | null;
   houseFrontPhotoUrl?: string | null;
+  houseType?: string | null;
 
   headFirstName: string;
   headMiddleName?: string | null;
@@ -34,6 +35,7 @@ export interface HouseholdRecord {
   headPhotoUrl?: string | null;
   headNinVerified?: boolean;
   headEmploymentStatus?: string | null;
+  headOccupation?: string | null;
   headEducationLevel?: string | null;
   headEmail?: string | null;
   headStateOfOrigin?: string | null;
@@ -48,6 +50,17 @@ export interface HouseholdRecord {
   totalHouseholdMembers: number;
   dependentsNotes?: string | null;
 
+  hasLivestock?: boolean;
+  cattleCount?: number;
+  horsesCount?: number;
+  sheepCount?: number;
+  goatsCount?: number;
+  poultryCount?: number;
+  donkeysCount?: number;
+  otherAnimalsCount?: number;
+  livestockNotes?: string | null;
+  totalAnimalsCount?: number;
+
   telcoProviders: string[];
   networkType?: string | null;
   commercialCustomersCount: number;
@@ -57,6 +70,7 @@ export interface HouseholdRecord {
   pueEquipment: string[];
   pueDailyHours?: number | null;
   primaryEnergySource?: string | null;
+  waterSource?: string | null;
 
   interventionStatus: string;
   interventionType?: string | null;
@@ -79,6 +93,7 @@ export const householdService = {
         ...data,
         offlineId,
         houseNumber: data.houseNumber || `NG-TEMP-${Date.now().toString().slice(-6)}`,
+        houseType: data.houseType || null,
         state: data.state || '',
         lga: data.lga || '',
         ward: data.ward || '',
@@ -88,14 +103,36 @@ export const householdService = {
         headPhone: data.headPhone || '',
         headPhoneVerified: Boolean(data.headPhoneVerified),
         headGender: data.headGender || 'MALE',
+        headEmploymentStatus: data.headEmploymentStatus || null,
+        headOccupation: data.headOccupation || null,
         wivesCount: Number(data.wivesCount) || 0,
         childrenCount: Number(data.childrenCount) || 0,
         otherDependentsCount: Number(data.otherDependentsCount) || 0,
         totalHouseholdMembers: Number(data.totalHouseholdMembers) || 1,
+        hasLivestock: Boolean(data.hasLivestock),
+        cattleCount: Number(data.cattleCount) || 0,
+        horsesCount: Number(data.horsesCount) || 0,
+        sheepCount: Number(data.sheepCount) || 0,
+        goatsCount: Number(data.goatsCount) || 0,
+        poultryCount: Number(data.poultryCount) || 0,
+        donkeysCount: Number(data.donkeysCount) || 0,
+        otherAnimalsCount: Number(data.otherAnimalsCount) || 0,
+        livestockNotes: data.livestockNotes || null,
+        totalAnimalsCount: Number(data.totalAnimalsCount) || (
+          (Number(data.cattleCount) || 0) +
+          (Number(data.horsesCount) || 0) +
+          (Number(data.sheepCount) || 0) +
+          (Number(data.goatsCount) || 0) +
+          (Number(data.poultryCount) || 0) +
+          (Number(data.donkeysCount) || 0) +
+          (Number(data.otherAnimalsCount) || 0)
+        ),
         telcoProviders: data.telcoProviders || [],
         commercialCustomersCount: Number(data.commercialCustomersCount) || 0,
         hasPUE: Boolean(data.hasPUE),
         pueEquipment: data.pueEquipment || [],
+        primaryEnergySource: data.primaryEnergySource || null,
+        waterSource: data.waterSource || null,
         interventionStatus: data.interventionStatus || 'Captured',
         status: 'pending',
         timestamp: new Date().toISOString(),
