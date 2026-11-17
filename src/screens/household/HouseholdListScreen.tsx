@@ -31,10 +31,18 @@ export default function HouseholdListScreen({ navigation }: { navigation: any })
     return unsubscribe;
   }, [navigation]);
 
-  const loadHouseholds = async () => {
+  const loadHouseholds = async (forceRefresh = false) => {
     try {
-      setLoading(true);
-      const data = await householdService.getCombinedHouseholds();
+      // Show local storage instantly if list is empty so agent doesn't see a blank spinner
+      if (!forceRefresh && households.length === 0) {
+        const local = await householdService.getOfflineHouseholds();
+        if (local && local.length > 0) {
+          setHouseholds(local);
+          setLoading(false);
+        }
+      }
+
+      const data = await householdService.getCombinedHouseholds(forceRefresh);
       setHouseholds(data);
     } catch (e) {
       console.error(e);
@@ -52,7 +60,7 @@ export default function HouseholdListScreen({ navigation }: { navigation: any })
         'Sync Complete',
         `Synced: ${result.synced} records${result.failed > 0 ? ` | Failed: ${result.failed}` : ''}`
       );
-      loadHouseholds();
+      loadHouseholds(true);
     } catch (e: any) {
       Alert.alert('Sync Error', e.message || 'Could not sync records');
     } finally {
@@ -145,14 +153,18 @@ export default function HouseholdListScreen({ navigation }: { navigation: any })
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.offlineId || item.houseNumber}
+          keyExtractor={(item) => item.offlineId || item.id || item.houseNumber}
           contentContainerStyle={styles.listContent}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews={true}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
-                loadHouseholds();
+                loadHouseholds(true);
               }}
             />
           }

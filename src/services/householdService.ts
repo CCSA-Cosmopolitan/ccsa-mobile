@@ -8,6 +8,16 @@ const getHouseholdsKey = () => {
   return uid ? `@offline_households_${uid}` : '@offline_households_guest';
 };
 
+// In-memory cache: avoids re-fetching remote data if screen is re-opened within 30s
+let _memCache: HouseholdRecord[] | null = null;
+let _memCacheTime = 0;
+const MEM_CACHE_TTL = 30_000; // 30 seconds
+
+export function clearHouseholdsMemCache() {
+  _memCache = null;
+  _memCacheTime = 0;
+}
+
 export interface HouseholdRecord {
   id?: string;
   offlineId: string;
@@ -141,6 +151,8 @@ export const householdService = {
       const existing = await this.getOfflineHouseholds();
       const updated = [record, ...existing.filter((h) => h.offlineId !== offlineId)];
       await AsyncStorage.setItem(getHouseholdsKey(), JSON.stringify(updated));
+      _memCache = null;
+      _memCache = null;
 
       // Attempt immediate background sync if connected
       this.syncHouseholds().catch(() => {});
@@ -259,6 +271,7 @@ export const householdService = {
       });
 
       await AsyncStorage.setItem(getHouseholdsKey(), JSON.stringify(updated));
+      _memCache = null;
     } catch (err: any) {
       console.error('Household sync error:', err);
       failed = pending.length;
@@ -269,14 +282,27 @@ export const householdService = {
 
   /**
    * Fetch remote households + robustly merge with local offline storage
-   * Ensures that no locally captured record ever disappears from the agent's view.
+   * High performance: in-memory cache, parallel I/O, O(N) hash indexes
    */
-  async getCombinedHouseholds(): Promise<HouseholdRecord[]> {
-    const local = await this.getOfflineHouseholds();
-    try {
-      const net = await NetInfo.fetch();
-      if (!net.isConnected) return local;
+  async getCombinedHouseholds(forceRefresh = false): Promise<HouseholdRecord[]> {
+    // 1. Fast in-memory cache hit (instant sub-millisecond return)
+    if (!forceRefresh && _memCache && Date.now() - _memCacheTime < MEM_CACHE_TTL) {
+      return _memCache;
+    }
 
+    // 2. Read local offline records and network status in parallel
+    const [local, net] = await Promise.all([
+      this.getOfflineHouseholds(),
+      NetInfo.fetch(),
+    ]);
+
+    if (!net.isConnected) {
+      _memCache = local;
+      _memCacheTime = Date.now();
+      return local;
+    }
+
+    try {
       let token = await auth?.currentUser?.getIdToken();
       if (!token && process.env.NODE_ENV === 'development') {
         token = 'TEST_TOKEN_123';
@@ -293,15 +319,22 @@ export const householdService = {
         const data = await res.json();
         const remoteList: any[] = data.households || [];
 
-        // Build a robust map of local records first (keyed by offlineId, server id, or houseNumber)
+        // 3. Build O(1) lookup indexes for local records
+        const byOfflineId = new Map<string, string>();
+        const byId = new Map<string, string>();
+        const byHouseNumber = new Map<string, string>();
         const recordMap = new Map<string, HouseholdRecord>();
 
         for (const loc of local) {
           const key = loc.offlineId || loc.id || loc.houseNumber;
-          if (key) recordMap.set(key, loc);
+          if (!key) continue;
+          recordMap.set(key, loc);
+          if (loc.offlineId) byOfflineId.set(loc.offlineId, key);
+          if (loc.id) byId.set(loc.id, key);
+          if (loc.houseNumber) byHouseNumber.set(loc.houseNumber, key);
         }
 
-        // Merge in remote records
+        // 4. Merge remote records in O(1) per record (O(N) total)
         for (const r of remoteList) {
           const remoteRecord: HouseholdRecord = {
             ...r,
@@ -312,18 +345,11 @@ export const householdService = {
             timestamp: r.createdAt || new Date().toISOString(),
           };
 
-          // Find if matching local record exists
-          let matchedKey: string | null = null;
-          for (const [k, existing] of recordMap.entries()) {
-            if (
-              (r.offlineId && existing.offlineId === r.offlineId) ||
-              (r.id && existing.id === r.id) ||
-              (r.houseNumber && existing.houseNumber === r.houseNumber)
-            ) {
-              matchedKey = k;
-              break;
-            }
-          }
+          const matchedKey =
+            (r.offlineId && byOfflineId.get(r.offlineId)) ||
+            (r.id && byId.get(r.id)) ||
+            (r.houseNumber && byHouseNumber.get(r.houseNumber)) ||
+            null;
 
           if (matchedKey) {
             const existing = recordMap.get(matchedKey)!;
@@ -334,7 +360,12 @@ export const householdService = {
             });
           } else {
             const newKey = remoteRecord.offlineId || remoteRecord.id || remoteRecord.houseNumber;
-            if (newKey) recordMap.set(newKey, remoteRecord);
+            if (newKey) {
+              recordMap.set(newKey, remoteRecord);
+              if (remoteRecord.offlineId) byOfflineId.set(remoteRecord.offlineId, newKey);
+              if (remoteRecord.id) byId.set(remoteRecord.id, newKey);
+              if (remoteRecord.houseNumber) byHouseNumber.set(remoteRecord.houseNumber, newKey);
+            }
           }
         }
 
@@ -344,14 +375,22 @@ export const householdService = {
           return timeB - timeA;
         });
 
-        // Cache the complete merged list back to AsyncStorage
-        await AsyncStorage.setItem(getHouseholdsKey(), JSON.stringify(mergedList));
+        // 5. Only rewrite AsyncStorage if data actually changed
+        if (mergedList.length !== local.length || local.some((h) => h.status !== 'synced')) {
+          await AsyncStorage.setItem(getHouseholdsKey(), JSON.stringify(mergedList));
+        }
+
+        _memCache = mergedList;
+        _memCacheTime = Date.now();
 
         return mergedList;
       }
     } catch (e) {
       console.warn('Could not fetch remote households; using local cache', e);
     }
+
+    _memCache = local;
+    _memCacheTime = Date.now();
     return local;
   },
 
