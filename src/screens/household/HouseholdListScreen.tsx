@@ -64,12 +64,12 @@ export default function HouseholdListScreen({ navigation }: { navigation: any })
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
-      h.houseNumber.toLowerCase().includes(q) ||
-      h.headFirstName.toLowerCase().includes(q) ||
-      h.headLastName.toLowerCase().includes(q) ||
-      (h.headNin && h.headNin.includes(q)) ||
-      h.ward.toLowerCase().includes(q) ||
-      h.lga.toLowerCase().includes(q)
+      (h.houseNumber || '').toLowerCase().includes(q) ||
+      (h.headFirstName || '').toLowerCase().includes(q) ||
+      (h.headLastName || '').toLowerCase().includes(q) ||
+      (h.headNin && h.headNin.toLowerCase().includes(q)) ||
+      (h.ward || '').toLowerCase().includes(q) ||
+      (h.lga || '').toLowerCase().includes(q)
     );
   });
 

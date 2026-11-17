@@ -4,8 +4,8 @@ import API_CONFIG from '../config/api';
 import { auth } from './firebase';
 
 const getHouseholdsKey = () => {
-  const uid = auth?.currentUser?.uid || 'guest';
-  return `@offline_households_${uid}`;
+  const uid = auth?.currentUser?.uid;
+  return uid ? `@offline_households_${uid}` : '@offline_households_guest';
 };
 
 export interface HouseholdRecord {
@@ -153,12 +153,48 @@ export const householdService = {
   },
 
   /**
-   * Get all offline households
+   * Get all offline households (with automatic orphan migration from guest/legacy storage)
    */
   async getOfflineHouseholds(): Promise<HouseholdRecord[]> {
     try {
-      const json = await AsyncStorage.getItem(getHouseholdsKey());
-      return json ? JSON.parse(json) : [];
+      const key = getHouseholdsKey();
+      const json = await AsyncStorage.getItem(key);
+      let items: HouseholdRecord[] = json ? JSON.parse(json) : [];
+
+      // If user is authenticated, check for any unmigrated records in legacy or guest storage
+      const uid = auth?.currentUser?.uid;
+      if (uid) {
+        let migrated = false;
+        for (const fallbackKey of ['@offline_households_guest', '@offline_households']) {
+          if (fallbackKey !== key) {
+            try {
+              const orphanJson = await AsyncStorage.getItem(fallbackKey);
+              if (orphanJson) {
+                const orphanItems: HouseholdRecord[] = JSON.parse(orphanJson);
+                if (Array.isArray(orphanItems) && orphanItems.length > 0) {
+                  const existingKeys = new Set(items.map((h) => h.offlineId || h.id || h.houseNumber));
+                  const newItems = orphanItems.filter(
+                    (h) => !existingKeys.has(h.offlineId || h.id || h.houseNumber)
+                  );
+                  if (newItems.length > 0) {
+                    items = [...items, ...newItems];
+                    migrated = true;
+                  }
+                }
+                // Clear orphan key after migrating
+                await AsyncStorage.removeItem(fallbackKey);
+              }
+            } catch (orphanErr) {
+              console.warn('Error migrating orphan households:', orphanErr);
+            }
+          }
+        }
+        if (migrated) {
+          await AsyncStorage.setItem(key, JSON.stringify(items));
+        }
+      }
+
+      return items;
     } catch {
       return [];
     }
@@ -200,12 +236,24 @@ export const householdService = {
       }
 
       const data = await res.json();
-      const syncedOfflineIds = new Set((data.households || []).map((h: any) => h.offlineId));
+      const returnedHouseholds: any[] = data.households || [];
+      const returnedByOfflineId = new Map(returnedHouseholds.map((h: any) => [h.offlineId, h]));
 
-      const updated = items.map((h) => {
-        if (syncedOfflineIds.has(h.offlineId)) {
+      // Re-read current items in case new records were added during the sync call
+      const currentItems = await this.getOfflineHouseholds();
+
+      const updated = currentItems.map((h) => {
+        const serverMatch = returnedByOfflineId.get(h.offlineId);
+        if (serverMatch) {
           synced++;
-          return { ...h, status: 'synced' as const, lastSyncAttempt: new Date().toISOString() };
+          return {
+            ...h,
+            id: serverMatch.id || h.id,
+            houseNumber: serverMatch.houseNumber || h.houseNumber,
+            status: 'synced' as const,
+            lastSyncAttempt: new Date().toISOString(),
+            syncError: null,
+          };
         }
         return h;
       });
@@ -220,7 +268,8 @@ export const householdService = {
   },
 
   /**
-   * Fetch remote households + combine with local offline
+   * Fetch remote households + robustly merge with local offline storage
+   * Ensures that no locally captured record ever disappears from the agent's view.
    */
   async getCombinedHouseholds(): Promise<HouseholdRecord[]> {
     const local = await this.getOfflineHouseholds();
@@ -233,7 +282,8 @@ export const householdService = {
         token = 'TEST_TOKEN_123';
       }
 
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/mobile/households`, {
+      // Fetch with limit=1000 so the agent sees all their captured records
+      const res = await fetch(`${API_CONFIG.BASE_URL}/api/mobile/households?limit=1000`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -241,19 +291,63 @@ export const householdService = {
 
       if (res.ok) {
         const data = await res.json();
-        const remote: HouseholdRecord[] = (data.households || []).map((r: any) => ({
-          ...r,
-          offlineId: r.offlineId || r.id,
-          status: 'synced' as const,
-          timestamp: r.createdAt || new Date().toISOString(),
-        }));
+        const remoteList: any[] = data.households || [];
 
-        // Merge: keep local pending/syncing, append remote
-        const localPending = local.filter((h) => h.status !== 'synced');
-        const remoteIds = new Set(remote.map((r) => r.houseNumber));
-        const nonDuplicatePending = localPending.filter((h) => !remoteIds.has(h.houseNumber));
+        // Build a robust map of local records first (keyed by offlineId, server id, or houseNumber)
+        const recordMap = new Map<string, HouseholdRecord>();
 
-        return [...nonDuplicatePending, ...remote];
+        for (const loc of local) {
+          const key = loc.offlineId || loc.id || loc.houseNumber;
+          if (key) recordMap.set(key, loc);
+        }
+
+        // Merge in remote records
+        for (const r of remoteList) {
+          const remoteRecord: HouseholdRecord = {
+            ...r,
+            offlineId: r.offlineId || r.id,
+            id: r.id,
+            houseNumber: r.houseNumber,
+            status: 'synced',
+            timestamp: r.createdAt || new Date().toISOString(),
+          };
+
+          // Find if matching local record exists
+          let matchedKey: string | null = null;
+          for (const [k, existing] of recordMap.entries()) {
+            if (
+              (r.offlineId && existing.offlineId === r.offlineId) ||
+              (r.id && existing.id === r.id) ||
+              (r.houseNumber && existing.houseNumber === r.houseNumber)
+            ) {
+              matchedKey = k;
+              break;
+            }
+          }
+
+          if (matchedKey) {
+            const existing = recordMap.get(matchedKey)!;
+            recordMap.set(matchedKey, {
+              ...existing,
+              ...remoteRecord,
+              status: 'synced',
+            });
+          } else {
+            const newKey = remoteRecord.offlineId || remoteRecord.id || remoteRecord.houseNumber;
+            if (newKey) recordMap.set(newKey, remoteRecord);
+          }
+        }
+
+        const mergedList = Array.from(recordMap.values()).sort((a, b) => {
+          const timeA = new Date(a.timestamp || 0).getTime();
+          const timeB = new Date(b.timestamp || 0).getTime();
+          return timeB - timeA;
+        });
+
+        // Cache the complete merged list back to AsyncStorage
+        await AsyncStorage.setItem(getHouseholdsKey(), JSON.stringify(mergedList));
+
+        return mergedList;
       }
     } catch (e) {
       console.warn('Could not fetch remote households; using local cache', e);
